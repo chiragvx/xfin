@@ -91,9 +91,11 @@ export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
                                 day: "dd MMM"
                             }
                         },
+                        border: {
+                            display: false,
+                        },
                         grid: {
                             color: gridColor,
-                            drawBorder: false,
                         },
                         ticks: {
                             color: tickColor,
@@ -103,9 +105,11 @@ export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
                     },
                     y: {
                         position: "right",
+                        border: {
+                            display: false,
+                        },
                         grid: {
                             color: gridColor,
-                            drawBorder: false,
                         },
                         ticks: {
                             color: tickColor,
