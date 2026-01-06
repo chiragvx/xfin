@@ -183,7 +183,7 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
             flex-direction: row;
             padding: 0;
             position: fixed;
-            bottom: 0;
+            bottom: 24px;
             left: 0;
             border-right: none;
             border-top: 1px solid var(--border);

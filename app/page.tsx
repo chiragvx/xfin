@@ -45,8 +45,11 @@ const StatusBar = () => (
         font-size: 9px;
         font-weight: 800;
         letter-spacing: 0.05em;
-        position: relative;
-        z-index: 1001;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
       }
       .st-item { display: flex; align-items: center; gap: var(--space-2); }
       .beat { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
@@ -116,53 +119,57 @@ export default function Home() {
               />
             </div>
 
-            <div className={`col-main ${mobileTradeTab === 'CHART' ? '' : 'hidden-mobile'}`}>
-              <Panel title="ANALYTICS" subtitle={activeSymbol} padding="none">
-                <PriceChart symbol={activeSymbol} />
-              </Panel>
+            <div className={`col-main ${mobileTradeTab !== 'MARKET' ? '' : 'hidden-mobile'}`}>
+              <div className={mobileTradeTab === 'CHART' ? '' : 'hidden-mobile'}>
+                <Panel title="ANALYTICS" subtitle={activeSymbol} padding="none">
+                  <PriceChart symbol={activeSymbol} />
+                </Panel>
+              </div>
 
-              <Panel className="terminal-panel" padding="none">
-                <div className="terminal-tabs">
-                  {['ORDERS', 'POSITIONS', 'DEPTH', 'LOGS'].map(tab => (
-                    <button key={tab} className={terminalTab === tab ? 'active' : ''} onClick={() => setTerminalTab(tab as any)}>
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-                <div className="terminal-content">
-                  {terminalTab === 'ORDERS' && <OrdersView orders={orders} onCancel={cancelOrder} onModify={(id) => { const o = orders.find(x => x.id === id); if (o) handleSelectSymbol(o.symbol, o.price); }} />}
-                  {terminalTab === 'POSITIONS' && (
-                    <div className="data-table">
-                      <table>
-                        <thead><tr><th>SYMBOL</th><th>QTY</th><th>AVG</th><th>LTP</th><th>P&L</th></tr></thead>
-                        <tbody>
-                          {holdings.map(h => (
-                            <tr key={h.symbol}>
-                              <td className="bold">{h.symbol}</td>
-                              <td className="mono">{h.qty}</td>
-                              <td className="mono">{h.avgCost.toFixed(2)}</td>
-                              <td className="mono">{h.currentPrice.toFixed(2)}</td>
-                              <td className={`mono bold ${h.unrealizedPL >= 0 ? 'success' : 'hazardous'}`}>{(h.unrealizedPL >= 0 ? '+' : '') + h.unrealizedPL.toFixed(2)}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {terminalTab === 'DEPTH' && (
-                    <div className="depth-split">
-                      <OrderBook symbol={activeSymbol} currentPrice={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
-                      <Tape symbol={activeSymbol} currentPrice={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
-                    </div>
-                  )}
-                  {terminalTab === 'LOGS' && (
-                    <div className="log-viewer mono">
-                      {logs.map((l, i) => <div key={i} className={`log-row ${l.type}`}><span className="muted">[{l.timestamp?.split('T')[1]?.split('.')[0] || '---'}]</span> {l.message}</div>)}
-                      <div ref={logEndRef} />
-                    </div>
-                  )}
-                </div>
-              </Panel>
+              <div className={mobileTradeTab === 'TERMINAL' ? '' : 'hidden-mobile'}>
+                <Panel className="terminal-panel" padding="none">
+                  <div className="terminal-tabs">
+                    {['ORDERS', 'POSITIONS', 'DEPTH', 'LOGS'].map(tab => (
+                      <button key={tab} className={terminalTab === tab ? 'active' : ''} onClick={() => setTerminalTab(tab as any)}>
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="terminal-content">
+                    {terminalTab === 'ORDERS' && <OrdersView orders={orders} onCancel={cancelOrder} onModify={(id) => { const o = orders.find(x => x.id === id); if (o) handleSelectSymbol(o.symbol, o.price); }} />}
+                    {terminalTab === 'POSITIONS' && (
+                      <div className="data-table">
+                        <table>
+                          <thead><tr><th>SYMBOL</th><th>QTY</th><th>AVG</th><th>LTP</th><th>P&L</th></tr></thead>
+                          <tbody>
+                            {holdings.map(h => (
+                              <tr key={h.symbol}>
+                                <td className="bold">{h.symbol}</td>
+                                <td className="mono">{h.qty}</td>
+                                <td className="mono">{h.avgCost.toFixed(2)}</td>
+                                <td className="mono">{h.currentPrice.toFixed(2)}</td>
+                                <td className={`mono bold ${h.unrealizedPL >= 0 ? 'success' : 'hazardous'}`}>{(h.unrealizedPL >= 0 ? '+' : '') + h.unrealizedPL.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                    {terminalTab === 'DEPTH' && (
+                      <div className="depth-split">
+                        <OrderBook symbol={activeSymbol} currentPrice={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
+                        <Tape symbol={activeSymbol} currentPrice={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
+                      </div>
+                    )}
+                    {terminalTab === 'LOGS' && (
+                      <div className="log-viewer mono">
+                        {logs.map((l, i) => <div key={i} className={`log-row ${l.type}`}><span className="muted">[{l.timestamp?.split('T')[1]?.split('.')[0] || '---'}]</span> {l.message}</div>)}
+                        <div ref={logEndRef} />
+                      </div>
+                    )}
+                  </div>
+                </Panel>
+              </div>
             </div>
 
             <div className="mobile-nav">
@@ -284,7 +291,7 @@ export default function Home() {
         @media (max-width: 768px) {
             .trade-layout { grid-template-columns: 1fr; gap: 0; }
             .hidden-mobile { display: none; }
-            .mobile-nav { display: flex; position: fixed; bottom: 50px; left: 0; right: 0; background: var(--bg-secondary); border-top: 1px solid var(--border); height: 40px; z-index: 1000; }
+            .mobile-nav { display: flex; position: fixed; bottom: 74px; left: 0; right: 0; background: var(--bg-secondary); border-top: 1px solid var(--border); height: 40px; z-index: 1000; }
             .mobile-nav button { flex: 1; border: none; font-size: 9px; font-weight: 800; color: var(--fg-muted); background: transparent; }
             .mobile-nav button.active { color: var(--accent); background: var(--accent-soft); }
         }
