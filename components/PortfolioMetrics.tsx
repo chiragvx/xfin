@@ -51,7 +51,7 @@ export default function PortfolioMetrics({ holdings }: PortfolioMetricsProps) {
                     color: '#808080',
                     usePointStyle: true,
                     pointStyle: 'rectRounded',
-                    font: { family: 'JetBrains Mono', size: 9, weight: '700' },
+                    font: { family: 'JetBrains Mono', size: 9, weight: 'bold' },
                     boxWidth: 6,
                     padding: 10
                 }
