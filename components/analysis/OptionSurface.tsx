@@ -39,7 +39,7 @@ export default function OptionSurface({ data, size, bounds, color = "#3b82f6", o
 
                 // Color based on height (heat map style)
                 const baseColor = new THREE.Color(color);
-                if (normalized > 0.7) baseColor.brighten && baseColor.lerp(new THREE.Color('#fff'), 0.3);
+                if (normalized > 0.7) baseColor.lerp(new THREE.Color('#ffffff'), 0.3);
                 vertexColors[attrIndex] = baseColor.r;
                 vertexColors[attrIndex + 1] = baseColor.g;
                 vertexColors[attrIndex + 2] = baseColor.b;
