@@ -122,6 +122,18 @@ function ExploreWidget({ title, subtitle, assets, onBuy, onSell, onAddToWatchlis
                     transition: opacity 0.15s;
                 }
                 tr:hover .action-group { opacity: 1; }
+                
+                @media (hover: none) {
+                    .action-group { opacity: 1; }
+                }
+
+                @media (max-width: 480px) {
+                    .muted.mono:not(.success):not(.hazardous) { display: none; }
+                    th:nth-child(4), td:nth-child(4) { display: none; }
+                    .quick-action { width: 24px; height: 24px; font-size: 10px; }
+                    td { padding: 8px; }
+                }
+
                 .quick-action {
                     width: 20px;
                     height: 20px;
@@ -283,8 +295,14 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
                     gap: 16px;
                 }
 
-                @media (max-width: 900px) {
+                @media (max-width: 1024px) {
                     .explore-grid { grid-template-columns: 1fr; }
+                }
+
+                @media (max-width: 768px) {
+                    .explore-container { padding: 16px; padding-bottom: 80px; }
+                    .explore-header { margin-bottom: 16px; }
+                    .explore-grid { gap: 12px; }
                 }
             `}</style>
         </div>

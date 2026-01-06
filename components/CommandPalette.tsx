@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { Search, Terminal, BarChart3, Wallet, Settings, Layout, TrendingUp } from "lucide-react";
+import { useMarket } from "@/context/MarketContext";
 
 export default function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
@@ -9,7 +11,7 @@ export default function CommandPalette() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && (e.key === "k" || e.key === "K")) {
         e.preventDefault();
         setIsOpen((prev) => !prev);
       }
@@ -18,8 +20,14 @@ export default function CommandPalette() {
       }
     };
 
+    const handleOpenEvent = () => setIsOpen(true);
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("open-command-palette", handleOpenEvent);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("open-command-palette", handleOpenEvent);
+    };
   }, []);
 
   useEffect(() => {
@@ -30,8 +38,20 @@ export default function CommandPalette() {
     }
   }, [isOpen]);
 
-  const handleSelect = (cmd: string) => {
+  const { tickers } = useMarket();
+
+  const handleSelect = (cmd: string, asset?: any) => {
     const c = cmd.toLowerCase();
+
+    if (asset) {
+      // Trigger generic "select symbol" flow
+      window.dispatchEvent(new CustomEvent("select-symbol", {
+        detail: { symbol: asset.symbol, price: asset.ltp }
+      }));
+      setIsOpen(false);
+      return;
+    }
+
     if (c === "/trade" || c === "/t") window.dispatchEvent(new CustomEvent("nav", { detail: "TRADE" }));
     if (c === "/portfolio" || c === "/p") window.dispatchEvent(new CustomEvent("nav", { detail: "PORTFOLIO" }));
     if (c === "/charts" || c === "/c") window.dispatchEvent(new CustomEvent("nav", { detail: "CHARTS" }));
@@ -40,6 +60,19 @@ export default function CommandPalette() {
     if (c === "/settings" || c === "/s") window.dispatchEvent(new CustomEvent("nav", { detail: "SETTINGS" }));
     setIsOpen(false);
   };
+
+  const filteredItems = [
+    { cmd: "/trade", desc: "EXECUTION TERMINAL [T]", icon: <Terminal size={14} /> },
+    { cmd: "/charts", desc: "VISUAL ANALYTICS [C]", icon: <BarChart3 size={14} /> },
+    { cmd: "/portfolio", desc: "WEALTH INTELLIGENCE [P]", icon: <Wallet size={14} /> },
+    { cmd: "/orders", desc: "ORDER BOOK LOGS [O]", icon: <Layout size={14} /> },
+    { cmd: "/funds", desc: "CAPITAL RESOURCES [F]", icon: <TrendingUp size={14} /> },
+    { cmd: "/settings", desc: "SYSTEM CONFIG [S]", icon: <Settings size={14} /> },
+  ].filter(i => i.cmd.includes(query.toLowerCase()) || i.desc.toLowerCase().includes(query.toLowerCase()));
+
+  const stockResults = query.length > 0
+    ? tickers.filter(t => t.symbol.includes(query.toUpperCase())).slice(0, 5)
+    : [];
 
   if (!isOpen) return null;
 
@@ -67,19 +100,33 @@ export default function CommandPalette() {
           />
         </div>
         <div className="palette-results">
-          {[
-            { cmd: "/trade", desc: "EXECUTION TERMINAL [T]" },
-            { cmd: "/charts", desc: "VISUAL ANALYTICS [C]" },
-            { cmd: "/portfolio", desc: "WEALTH INTELLIGENCE [P]" },
-            { cmd: "/orders", desc: "ORDER BOOK LOGS [O]" },
-            { cmd: "/funds", desc: "CAPITAL RESOURCES [F]" },
-            { cmd: "/settings", desc: "SYSTEM CONFIG [S]" },
-          ].map((item) => (
-            <div key={item.cmd} className="result-item" onClick={() => handleSelect(item.cmd)}>
-              <span className="result-cmd">{item.cmd}</span>
-              <span className="result-desc">{item.desc}</span>
+          {stockResults.length > 0 && (
+            <div className="result-section">
+              <div className="section-label">MARKET_ASSETS</div>
+              {stockResults.map(t => (
+                <div key={t.symbol} className="result-item" onClick={() => handleSelect('', t)}>
+                  <div className="item-left">
+                    <Search size={14} className="accent-color" />
+                    <span className="result-cmd">{t.symbol}</span>
+                  </div>
+                  <span className="result-desc mono">₹{t.ltp.toFixed(2)}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          )}
+
+          <div className="result-section">
+            <div className="section-label">SYSTEM_COMMANDS</div>
+            {filteredItems.map((item) => (
+              <div key={item.cmd} className="result-item" onClick={() => handleSelect(item.cmd)}>
+                <div className="item-left">
+                  <span className="muted">{item.icon}</span>
+                  <span className="result-cmd">{item.cmd}</span>
+                </div>
+                <span className="result-desc">{item.desc}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -140,8 +187,18 @@ export default function CommandPalette() {
           border-left: 3px solid transparent;
         }
         .result-item:hover {
-          background: var(--panel-bg);
+          background: rgba(255, 255, 255, 0.05);
           border-left-color: var(--accent);
+        }
+        .item-left { display: flex; align-items: center; gap: 12px; }
+        .accent-color { color: var(--accent); }
+        .section-label {
+            padding: 8px 12px;
+            font-size: 8px;
+            color: var(--muted);
+            font-family: var(--font-mono);
+            background: rgba(255,255,255,0.02);
+            letter-spacing: 0.1em;
         }
         .result-cmd {
           color: var(--accent);
@@ -150,6 +207,16 @@ export default function CommandPalette() {
         .result-desc {
           font-size: 11px;
           color: var(--muted);
+        }
+
+        @media (max-width: 768px) {
+          .command-palette {
+            width: 90%;
+            max-width: 400px;
+          }
+          .palette-input input { font-size: 16px; }
+          .result-desc { display: none; }
+          .result-item { padding: 16px 12px; }
         }
       `}</style>
     </div>

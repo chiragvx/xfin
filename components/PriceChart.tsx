@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import {
     Chart as ChartJS,
     CategoryScale,
@@ -12,6 +12,7 @@ import {
 import { useTheme } from "./ThemeProvider";
 import { CandlestickController, CandlestickElement } from "chartjs-chart-financial";
 import "chartjs-adapter-luxon";
+import { generateMockData } from "@/utils/chartUtils";
 
 // Register Chart.js components
 ChartJS.register(
@@ -29,11 +30,16 @@ interface PriceChartProps {
     data?: any[];
 }
 
-export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
+export default function PriceChart({ symbol, data }: PriceChartProps) {
     const chartRef = useRef<HTMLCanvasElement>(null);
     const chartInstance = useRef<ChartJS | null>(null);
     const [isMounted, setIsMounted] = useState(false);
     const { theme } = useTheme();
+
+    const chartData = useMemo(() => {
+        if (data && data.length > 0) return data;
+        return generateMockData(symbol);
+    }, [data, symbol]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -41,7 +47,17 @@ export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
     }, []);
 
     useEffect(() => {
-        if (!isMounted || !chartRef.current || data.length === 0) return;
+        if (!isMounted || !chartRef.current || chartData.length === 0) return;
+
+        const container = chartRef.current.parentElement;
+        if (!container) return;
+
+        const resizeObserver = new ResizeObserver(() => {
+            if (chartInstance.current) {
+                chartInstance.current.resize();
+            }
+        });
+        resizeObserver.observe(container);
 
         if (chartInstance.current) {
             chartInstance.current.destroy();
@@ -60,7 +76,7 @@ export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
                 datasets: [
                     {
                         label: symbol,
-                        data: data,
+                        data: chartData,
                         borderColor: isLight ? "#ccc" : "#222",
                         color: {
                             up: "#00c853",
@@ -134,11 +150,13 @@ export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
         });
 
         return () => {
+            resizeObserver.disconnect();
             if (chartInstance.current) {
                 chartInstance.current.destroy();
+                chartInstance.current = null;
             }
         };
-    }, [isMounted, data, symbol, theme]);
+    }, [isMounted, chartData, symbol, theme]);
 
     if (!isMounted) {
         return <div style={{ height: "100%", width: "100%", background: "var(--background)" }} />;
@@ -146,7 +164,7 @@ export default function PriceChart({ symbol, data = [] }: PriceChartProps) {
 
     return (
         <div style={{ position: "relative", height: "100%", width: "100%", background: "var(--background)" }}>
-            {data.length === 0 && (
+            {chartData.length === 0 && (
                 <div style={{
                     position: "absolute",
                     top: "50%",

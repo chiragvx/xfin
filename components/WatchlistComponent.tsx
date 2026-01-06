@@ -1,17 +1,72 @@
 "use client";
 
-import React, { useState } from "react";
-import { Plus, Settings2, Trash2, Edit3, ChevronDown, Search } from "lucide-react";
-import { useWatchlists, Watchlist } from "@/hooks/useWatchlists";
-import { Ticker } from "@/hooks/useMarketData";
+import React, { useState, useEffect, useRef } from "react";
+import { Plus, Settings2, Trash2, Edit3, ChevronDown, Search, X, Info } from "lucide-react";
+import { useWatchlist } from "@/context/WatchlistContext";
+import { useMarket, Ticker } from "@/context/MarketContext";
 
 interface WatchlistComponentProps {
-    tickers: Ticker[];
     onSelectSymbol: (symbol: string, ltp: number) => void;
     onAction?: (action: 'BUY' | 'SELL' | 'INFO', symbol: string, ltp: number) => void;
 }
 
-export default function WatchlistComponent({ tickers, onSelectSymbol, onAction }: WatchlistComponentProps) {
+const WatchlistRow = ({
+    ticker,
+    activeWatchlist,
+    onSelectSymbol,
+    onAction,
+    onRemove,
+    isSelected
+}: {
+    ticker: Ticker,
+    activeWatchlist: any,
+    onSelectSymbol: any,
+    onAction: any,
+    onRemove: any,
+    isSelected: boolean
+}) => {
+    return (
+        <tr className={`watchlist-row ${isSelected ? 'selected' : ''}`} onClick={() => onSelectSymbol(ticker.symbol, ticker.ltp)}>
+            <td className="symbol-col">
+                <span className="bold">{ticker.symbol}</span>
+            </td>
+
+            <td className="data-col mono">
+                <div className="cell-relative">
+                    <div className="stock-info-wrap">
+                        <span className="ltp">₹{ticker.ltp.toFixed(2)}</span>
+                        <span className={`chg ${ticker.change >= 0 ? "success" : "hazardous"}`}>
+                            {ticker.change >= 0 ? "+" : ""}{ticker.change.toFixed(2)}%
+                        </span>
+                    </div>
+
+                    <div className="action-hover-overlay">
+                        <div className="action-buttons-row">
+                            <button
+                                className="btn-qs buy"
+                                onClick={(e) => { e.stopPropagation(); onAction?.('BUY', ticker.symbol, ticker.ltp); }}
+                            >B</button>
+                            <button
+                                className="btn-qs sell"
+                                onClick={(e) => { e.stopPropagation(); onAction?.('SELL', ticker.symbol, ticker.ltp); }}
+                            >S</button>
+                            <button
+                                className="btn-qs util"
+                                onClick={(e) => { e.stopPropagation(); onAction?.('INFO', ticker.symbol, ticker.ltp); }}
+                            ><Info size={12} /></button>
+                            <button
+                                className="btn-qs util remove"
+                                onClick={(e) => { e.stopPropagation(); onRemove(ticker.symbol); }}
+                            ><X size={12} /></button>
+                        </div>
+                    </div>
+                </div>
+            </td>
+        </tr>
+    );
+};
+
+export default function WatchlistComponent({ onSelectSymbol, onAction }: WatchlistComponentProps) {
     const {
         watchlists,
         activeWatchlistId,
@@ -20,20 +75,51 @@ export default function WatchlistComponent({ tickers, onSelectSymbol, onAction }
         deleteWatchlist,
         addSymbolToWatchlist,
         removeSymbolFromWatchlist,
-        updateWatchlistSettings,
-        renameWatchlist
-    } = useWatchlists();
+    } = useWatchlist();
+    const { tickers } = useMarket();
 
     const [isAddingWatchlist, setIsAddingWatchlist] = useState(false);
     const [newWatchlistName, setNewWatchlistName] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [isSearching, setIsSearching] = useState(false);
+    const [selectedIndex, setSelectedIndex] = useState(0);
 
     const activeWatchlist = watchlists.find(w => w.id === activeWatchlistId);
 
     const filteredTickers = activeWatchlist
         ? tickers.filter(t => activeWatchlist.symbols.includes(t.symbol))
         : [];
+
+    useEffect(() => {
+        const handleKeys = (e: KeyboardEvent) => {
+            if (document.activeElement?.tagName === 'INPUT') return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedIndex(prev => Math.min(prev + 1, filteredTickers.length - 1));
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedIndex(prev => Math.max(prev - 1, 0));
+            } else if (e.key === 'Enter') {
+                const t = filteredTickers[selectedIndex];
+                if (t) onSelectSymbol(t.symbol, t.ltp);
+            } else if (e.key.toLowerCase() === 'b') {
+                const t = filteredTickers[selectedIndex];
+                if (t) onAction?.('BUY', t.symbol, t.ltp);
+            } else if (e.key.toLowerCase() === 's') {
+                const t = filteredTickers[selectedIndex];
+                if (t) onAction?.('SELL', t.symbol, t.ltp);
+            } else if (e.key.toLowerCase() === 'i') {
+                const t = filteredTickers[selectedIndex];
+                if (t) onAction?.('INFO', t.symbol, t.ltp);
+            } else if (e.key.toLowerCase() === 'r') {
+                const t = filteredTickers[selectedIndex];
+                if (t && activeWatchlistId) removeSymbolFromWatchlist(activeWatchlistId, t.symbol);
+            }
+        };
+        window.addEventListener('keydown', handleKeys);
+        return () => window.removeEventListener('keydown', handleKeys);
+    }, [filteredTickers, selectedIndex, onSelectSymbol]);
 
     const handleCreateWatchlist = (e: React.FormEvent) => {
         e.preventDefault();
@@ -132,57 +218,21 @@ export default function WatchlistComponent({ tickers, onSelectSymbol, onAction }
                 <table>
                     <thead>
                         <tr>
-                            <th>SYMBOL</th>
-                            {activeWatchlist?.settings.columns.includes("LTP") && <th>LTP</th>}
-                            {activeWatchlist?.settings.columns.includes("CHG%") && <th>CHG%</th>}
-                            {activeWatchlist?.settings.columns.includes("VOL") && <th>VOL</th>}
-                            <th style={{ width: '40px' }}></th>
+                            <th style={{ width: '50%' }}>SYMBOL</th>
+                            <th style={{ width: '50%', textAlign: 'right' }}>PRICE / CHG</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredTickers.map(t => (
-                            <tr key={t.symbol} onClick={() => onSelectSymbol(t.symbol, t.ltp)}>
-                                <td className="bold">{t.symbol}</td>
-                                {activeWatchlist?.settings.columns.includes("LTP") && (
-                                    <td className="mono">₹{t.ltp.toFixed(2)}</td>
-                                )}
-                                {activeWatchlist?.settings.columns.includes("CHG%") && (
-                                    <td className={t.change >= 0 ? "success mono" : "hazardous mono"}>
-                                        {t.change >= 0 ? "+" : ""}{t.change.toFixed(2)}%
-                                    </td>
-                                )}
-                                {activeWatchlist?.settings.columns.includes("VOL") && (
-                                    <td className="muted mono">{t.volume}</td>
-                                )}
-                                <td className="actions">
-                                    <div className="action-group">
-                                        <button
-                                            className="quick-action buy"
-                                            onClick={(e) => { e.stopPropagation(); onAction?.('BUY', t.symbol, t.ltp); }}
-                                            title="BUY"
-                                        >B</button>
-                                        <button
-                                            className="quick-action sell"
-                                            onClick={(e) => { e.stopPropagation(); onAction?.('SELL', t.symbol, t.ltp); }}
-                                            title="SELL"
-                                        >S</button>
-                                        <button
-                                            className="quick-action info"
-                                            onClick={(e) => { e.stopPropagation(); onAction?.('INFO', t.symbol, t.ltp); }}
-                                            title="DETAILS"
-                                        >i</button>
-                                        <button
-                                            className="remove-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                removeSymbolFromWatchlist(activeWatchlistId, t.symbol);
-                                            }}
-                                        >
-                                            <X size={12} />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
+                        {filteredTickers.map((t, idx) => (
+                            <WatchlistRow
+                                key={t.symbol}
+                                ticker={t}
+                                activeWatchlist={activeWatchlist}
+                                onSelectSymbol={onSelectSymbol}
+                                onAction={onAction}
+                                onRemove={(sym: string) => removeSymbolFromWatchlist(activeWatchlistId!, sym)}
+                                isSelected={selectedIndex === idx}
+                            />
                         ))}
                     </tbody>
                 </table>
@@ -194,181 +244,185 @@ export default function WatchlistComponent({ tickers, onSelectSymbol, onAction }
             </div>
 
             <style jsx>{`
-                .watchlist-terminal {
+                .watchlist-container {
                     display: flex;
                     flex-direction: column;
                     height: 100%;
-                }
-                .watchlist-tabs {
-                    display: flex;
-                    border-bottom: 1px solid var(--border);
-                    background: var(--panel-header-bg);
-                }
-                .tabs-scroll {
-                    display: flex;
-                    overflow-x: auto;
-                    scrollbar-width: none;
-                }
-                .tabs-scroll::-webkit-scrollbar { display: none; }
-                
-                .tab-btn {
-                    padding: 10px 16px;
-                    border: none;
                     background: transparent;
-                    color: var(--muted);
-                    font-size: 9px;
-                    font-weight: 700;
-                    font-family: var(--font-mono);
-                    cursor: pointer;
-                    border-right: 1px solid var(--border);
-                    white-space: nowrap;
-                    transition: all 0.2s;
                 }
-                .tab-btn.active { background: var(--background); color: var(--accent); }
-                .tab-btn:hover:not(.active) { color: var(--foreground); }
-
-                .add-tab-btn {
-                    padding: 0 12px;
-                    background: transparent;
-                    border: none;
-                    color: var(--muted);
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                }
-                .add-form input {
-                    background: transparent;
-                    border: none;
-                    padding: 10px 12px;
-                    color: var(--accent);
-                    font-family: var(--font-mono);
-                    font-size: 9px;
-                    width: 100px;
-                    outline: none;
-                }
-
-                .watchlist-toolbar {
+                .watchlist-header {
                     padding: 8px 12px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
                     border-bottom: 1px solid var(--border);
-                }
-                .search-box {
-                    position: relative;
-                    display: flex;
-                    align-items: center;
-                    gap: 8px;
-                    background: #0a0a0a;
-                    border: 1px solid var(--border);
-                    padding: 4px 10px;
-                    border-radius: 4px;
-                    flex: 1;
-                    max-width: 200px;
-                }
-                .search-box input {
-                    background: transparent;
-                    border: none;
-                    color: var(--foreground);
-                    font-size: 10px;
-                    width: 100%;
-                    outline: none;
-                }
-                .search-results {
-                    position: absolute;
-                    top: 100%;
-                    left: 0;
-                    right: 0;
                     background: var(--panel-header-bg);
-                    border: 1px solid var(--border);
+                }
+                .wl-tabs {
+                    display: flex;
+                    gap: 4px;
+                }
+                .wl-tab {
+                    padding: 6px 12px;
+                    font-size: 9px;
+                    font-weight: 800;
+                    font-family: var(--font-mono);
+                    color: var(--muted);
+                    cursor: pointer;
+                    transition: var(--transition);
+                    border-radius: var(--radius-sm);
+                    letter-spacing: 0.05em;
+                }
+                .wl-tab:hover { color: var(--foreground); background: var(--glass); }
+                .wl-tab.active { color: var(--accent); background: var(--accent-soft); }
+
+                .wl-content {
+                    flex: 1;
+                    overflow-y: auto;
+                    position: relative;
+                }
+                .wl-table {
+                    width: 100%;
                     border-top: none;
                     z-index: 100;
                     box-shadow: 0 10px 20px rgba(0,0,0,0.5);
                 }
-                .search-item {
-                    padding: 8px 12px;
-                    display: flex;
-                    justify-content: space-between;
-                    cursor: pointer;
-                }
-                .search-item:hover { background: rgba(255,255,255,0.05); }
-
-                .toolbar-actions { display: flex; gap: 4px; }
-                .icon-btn {
-                    background: transparent;
-                    border: none;
-                    color: var(--muted);
-                    padding: 4px;
-                    cursor: pointer;
-                    border-radius: 4px;
-                }
-                .icon-btn:hover { background: rgba(255,255,255,0.05); color: var(--foreground); }
-                .icon-btn.danger:hover { color: var(--hazard); }
-
-                .watchlist-content { flex: 1; overflow-y: auto; }
                 table { width: 100%; border-collapse: collapse; }
+                .watchlist-row { 
+                    border-bottom: 1px solid rgba(255,255,255,0.03); 
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    cursor: pointer;
+                }
+                .watchlist-row:hover { background: rgba(255,255,255,0.04); }
+                .watchlist-row.selected { background: rgba(0, 255, 130, 0.1); border-left: 2px solid var(--accent); }
+                
+                td { padding: 8px 12px; vertical-align: middle; }
+                
+                .symbol-info { display: flex; flex-direction: column; }
+                .price-info { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+                
+                .watchlist-content { flex: 1; overflow-y: auto; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                
                 th { 
                     text-align: left; 
                     padding: 8px 12px; 
-                    font-size: 9px; 
+                    font-size: 8px; 
                     color: var(--muted); 
                     border-bottom: 1px solid var(--border);
-                    font-weight: 600;
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
                 }
-                td { padding: 10px 12px; font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.02); }
-                tr { cursor: pointer; transition: background 0.1s; }
-                tr:hover { background: rgba(255,255,255,0.02); }
-                
-                .action-group {
-                    opacity: 0;
-                    display: flex;
-                    gap: 4px;
-                    transition: opacity 0.2s;
-                }
-                tr:hover .action-group { opacity: 1; }
 
-                .quick-action {
-                    width: 18px;
-                    height: 18px;
+                .watchlist-row { 
+                    border-bottom: 1px solid rgba(255,255,255,0.03); 
+                    transition: background 0.2s;
+                    cursor: pointer;
+                    position: relative;
+                }
+                .watchlist-row:hover { background: rgba(255,255,255,0.04); }
+                
+                td { padding: 0; vertical-align: middle; }
+                .cell-relative { 
+                    position: relative; 
+                    height: 44px; /* Fixed row height for alignment */
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: flex-end; 
+                    padding: 0 12px;
+                }
+                
+                .symbol-col { font-size: 11px; padding: 0 12px; }
+                .data-col { text-align: right; }
+                
+                .stock-info-wrap {
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 12px;
+                    transition: opacity 0.12s ease;
+                    align-items: center;
+                }
+                .watchlist-row:hover .stock-info-wrap { opacity: 0; }
+
+                .action-hover-overlay {
+                    position: absolute;
+                    top: 0;
+                    right: 0;
+                    bottom: 0;
+                    left: 0;
+                    background: #0d0d0d; 
+                    display: flex;
+                    align-items: center;
+                    justify-content: flex-end;
+                    padding-right: 12px;
+                    opacity: 0;
+                    pointer-events: none;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    z-index: 5;
+                }
+                .watchlist-row:hover .action-hover-overlay {
+                    opacity: 1;
+                    pointer-events: auto;
+                }
+
+                .action-buttons-row {
+                    display: flex;
+                    gap: 6px;
+                    align-items: center;
+                }
+
+                .btn-qs {
+                    width: 24px;
+                    height: 24px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    border: 1px solid var(--border);
-                    background: var(--panel-header-bg);
-                    color: var(--muted);
-                    font-size: 8px;
-                    font-weight: 800;
+                    border: 1px solid rgba(255,255,255,0.1);
+                    background: #1a1a1a;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 900;
                     font-family: var(--font-mono);
-                    border-radius: 3px;
                     cursor: pointer;
                     transition: all 0.2s;
                 }
-                .quick-action:hover { transform: scale(1.1); }
-                .quick-action.buy:hover { background: var(--accent); color: #000; border-color: var(--accent); }
-                .quick-action.sell:hover { background: var(--hazard); color: #000; border-color: var(--hazard); }
-                .quick-action.info:hover { background: #3498db; color: #fff; border-color: #3498db; }
-
-                .remove-btn {
-                    background: transparent;
-                    border: none;
-                    color: var(--muted);
-                    cursor: pointer;
-                    padding: 4px;
-                    border-radius: 4px;
-                }
-                .remove-btn:hover { color: var(--hazard); background: var(--hazard-soft); }
-
-                .empty-state { padding: 40px; text-align: center; }
                 
+                .btn-qs.buy { color: #00ff82; border-color: rgba(0,255,130,0.2); }
+                .btn-qs.buy:hover { background: #00ff82; color: #000; border-color: #00ff82; }
+                
+                .btn-qs.sell { color: #ff3c3c; border-color: rgba(255,60,60,0.2); }
+                .btn-qs.sell:hover { background: #ff3c3c; color: #000; border-color: #ff3c3c; }
+                
+                .btn-qs.util { color: var(--muted); }
+                .btn-qs.util:hover { color: #fff; background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); }
+                
+                .btn-qs.util.remove:hover { color: #ff3c3c; background: rgba(255,60,60,0.1); border-color: #ff3c3c; }
+
+                @media (max-width: 600px) {
+                    .cell-relative { height: auto; padding: 12px; flex-direction: column; align-items: flex-start; }
+                    .action-hover-overlay {
+                        position: static;
+                        opacity: 1;
+                        background: transparent;
+                        padding: 6px 0 0 0;
+                        justify-content: flex-start;
+                        pointer-events: auto;
+                        transform: none;
+                    }
+                    .watchlist-row:hover .stock-info-wrap { opacity: 1; }
+                    .watchlist-row { display: flex; flex-direction: column; padding: 0; }
+                    .stock-info-wrap { justify-content: flex-start; }
+                }
+
+                .ltp { font-size: 11px; font-weight: 700; color: #fff; }
+                .chg { font-size: 10px; font-weight: 600; }
                 .mono { font-family: var(--font-mono); }
-                .fs-10 { font-size: 10px; }
                 .bold { font-weight: 700; }
-                .muted { color: var(--muted); }
+                .success { color: #00ff82; }
+                .hazardous { color: #ff3c3c; }
+
             `}</style>
         </div>
     );
 }
 
-const X = ({ size }: { size: number }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-);

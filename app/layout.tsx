@@ -10,6 +10,9 @@ import StatusBarTimer from "@/components/StatusBarTimer";
 import CommandPalette from "@/components/CommandPalette";
 
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { MarketProvider } from "@/context/MarketContext";
+import { WatchlistProvider } from "@/context/WatchlistContext";
+import { PortfolioProvider } from "@/context/PortfolioContext";
 
 export default function RootLayout({
     children,
@@ -26,16 +29,22 @@ export default function RootLayout({
             </head>
             <body>
                 <ThemeProvider>
-                    <CommandPalette />
-                    <main className="shell">
-                        {children}
-                    </main>
-                    <footer className="status-bar">
-                        <div className="status-item">LEDGER-ONE V1.1.0</div>
-                        <div className="status-item">SYSTEM: OK</div>
-                        <div className="status-item">FEED: LIVE</div>
-                        <StatusBarTimer />
-                    </footer>
+                    <MarketProvider>
+                        <WatchlistProvider>
+                            <PortfolioProvider>
+                                <CommandPalette />
+                                <main className="shell">
+                                    {children}
+                                </main>
+                                <footer className="status-bar">
+                                    <div className="status-item">LEDGER-ONE V1.1.0</div>
+                                    <div className="status-item">SYSTEM: OK</div>
+                                    <div className="status-item">FEED: LIVE</div>
+                                    <StatusBarTimer />
+                                </footer>
+                            </PortfolioProvider>
+                        </WatchlistProvider>
+                    </MarketProvider>
                 </ThemeProvider>
             </body>
         </html>

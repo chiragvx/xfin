@@ -213,34 +213,36 @@ export default function FloatingOrderForm({
                     position: fixed;
                     top: 0;
                     left: 0;
-                    width: 300px;
-                    background: var(--panel-bg);
-                    border: 1px solid var(--border);
-                    border-radius: 4px;
+                    width: 320px;
+                    background: rgba(5, 5, 5, 0.85);
+                    backdrop-filter: blur(24px);
+                    border: 1px solid var(--border-strong);
+                    border-radius: var(--radius-md);
                     z-index: 1000;
                     overflow: hidden;
                     user-select: none;
+                    box-shadow: var(--panel-shadow);
                 }
                 .floating-order-form.expanded {
-                    animation: expandIn 0.25s ease-out;
+                    animation: expandIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 .floating-order-form.minimizing {
                     opacity: 0;
                     transform: translate(${position.x}px, ${position.y}px) scale(0.9) translateY(50px) !important;
                     pointer-events: none;
-                    transition: all 0.25s ease-in;
+                    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 .floating-order-form.restoring {
-                    animation: expandIn 0.25s ease-out;
+                    animation: expandIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 }
                 @keyframes expandIn {
-                    from { opacity: 0; transform: translate(${position.x}px, ${position.y}px) scale(0.9) translateY(50px); }
+                    from { opacity: 0; transform: translate(${position.x}px, ${position.y}px) scale(0.95) translateY(20px); }
                     to { opacity: 1; transform: translate(${position.x}px, ${position.y}px) scale(1) translateY(0); }
                 }
                 
                 .form-header {
-                    background: var(--panel-header-bg);
-                    padding: 8px 12px;
+                    background: rgba(15, 15, 15, 0.95);
+                    padding: 10px 16px;
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
@@ -248,9 +250,9 @@ export default function FloatingOrderForm({
                     cursor: grab;
                 }
                 .form-header:active { cursor: grabbing; }
-                .header-left { display: flex; align-items: center; gap: 8px; }
-                .header-title { font-size: 10px; font-weight: 600; font-family: var(--font-mono); color: var(--muted); }
-                .header-actions { display: flex; gap: 4px; }
+                .header-left { display: flex; align-items: center; gap: 10px; }
+                .header-title { font-size: 9px; font-weight: 800; font-family: var(--font-mono); color: var(--muted); letter-spacing: 0.15em; }
+                .header-actions { display: flex; gap: 6px; }
                 .icon-btn {
                     background: transparent;
                     border: none;
@@ -260,93 +262,136 @@ export default function FloatingOrderForm({
                     display: flex;
                     align-items: center;
                     border-radius: 2px;
+                    transition: var(--transition);
                 }
-                .icon-btn:hover { background: rgba(255,255,255,0.05); color: var(--foreground); }
+                .icon-btn:hover { background: var(--glass-hover); color: var(--foreground); }
                 .icon-btn.close:hover { color: var(--hazard); }
 
-                .form-body { padding: 12px; }
+                .form-body { padding: 20px; }
                 .symbol-banner {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    margin-bottom: 16px;
+                    margin-bottom: 24px;
+                    padding-bottom: 12px;
+                    border-bottom: 1px solid var(--border);
                 }
                 .symbol-info { display: flex; flex-direction: column; gap: 2px; }
-                .symbol-name { font-size: 16px; font-weight: 700; }
-                .symbol-exchange { font-size: 9px; color: var(--muted); font-family: var(--font-mono); }
+                .symbol-name { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+                .symbol-exchange { font-size: 8px; color: var(--muted); font-family: var(--font-mono); font-weight: 800; letter-spacing: 0.1em; }
                 
                 .side-toggle {
                     display: flex;
                     border: 1px solid var(--border);
-                    border-radius: 4px;
+                    border-radius: var(--radius-sm);
                     overflow: hidden;
+                    background: #000;
                 }
                 .side-toggle button {
                     border: none;
                     background: transparent;
                     color: var(--muted);
-                    padding: 6px 12px;
-                    font-size: 10px;
-                    font-weight: 700;
+                    padding: 8px 16px;
+                    font-size: 9px;
+                    font-weight: 900;
                     font-family: var(--font-mono);
                     cursor: pointer;
-                    transition: all 0.15s;
+                    transition: var(--transition);
+                    letter-spacing: 0.05em;
                 }
-                .side-toggle.BUY button:first-child { background: var(--accent); color: #000; }
-                .side-toggle.SELL button:last-child { background: var(--hazard); color: #000; }
+                .side-toggle.BUY button:first-child { background: var(--accent); color: #000; box-shadow: var(--accent-glow); }
+                .side-toggle.SELL button:last-child { background: var(--hazard); color: #000; box-shadow: var(--hazard-glow); }
 
                 .input-grid {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
-                    gap: 10px;
-                    margin-bottom: 12px;
+                    gap: 16px;
+                    margin-bottom: 20px;
                 }
                 .input-field label {
                     display: block;
-                    font-size: 9px;
+                    font-size: 8px;
                     color: var(--muted);
-                    margin-bottom: 4px;
+                    margin-bottom: 8px;
                     font-family: var(--font-mono);
+                    font-weight: 800;
+                    letter-spacing: 0.1em;
                 }
                 .input-field input {
                     width: 100%;
-                    background: var(--background);
+                    background: #000;
                     border: 1px solid var(--border);
                     color: var(--foreground);
-                    padding: 8px;
-                    border-radius: 4px;
-                    font-size: 12px;
+                    padding: 12px;
+                    border-radius: var(--radius-sm);
+                    font-size: 14px;
                     font-family: var(--font-mono);
+                    font-weight: 600;
+                    transition: var(--transition);
                 }
-                .input-field input:focus { border-color: var(--accent); outline: none; }
+                .input-field input:focus { border-color: var(--accent); box-shadow: var(--accent-glow); outline: none; }
 
                 .order-summary {
                     display: flex;
                     justify-content: space-between;
-                    padding: 10px;
-                    background: var(--background);
-                    border-radius: 4px;
-                    margin-bottom: 12px;
+                    padding: 14px;
+                    background: #000;
+                    border-radius: var(--radius-sm);
+                    margin-bottom: 24px;
                     font-size: 11px;
                     font-family: var(--font-mono);
+                    border: 1px solid var(--border);
                 }
 
                 .execute-btn {
                     width: 100%;
-                    padding: 10px;
+                    padding: 14px;
                     border: none;
-                    border-radius: 4px;
-                    font-weight: 700;
+                    border-radius: var(--radius-sm);
+                    font-weight: 900;
                     font-family: var(--font-mono);
                     cursor: pointer;
-                    font-size: 11px;
-                    transition: all 0.15s;
+                    font-size: 12px;
+                    transition: var(--transition);
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
                 }
-                .execute-btn.buy { background: var(--accent); color: #000; }
-                .execute-btn.sell { background: var(--hazard); color: #000; }
-                .execute-btn:hover { filter: brightness(1.1); }
+                .execute-btn.buy { background: var(--accent); color: #000; box-shadow: var(--accent-glow); }
+                .execute-btn.sell { background: var(--hazard); color: #000; box-shadow: var(--hazard-glow); }
+                .execute-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+                .execute-btn:active { transform: translateY(1px); }
 
                 .muted { color: var(--muted); }
+
+                @media (max-width: 768px) {
+                  .floating-order-form {
+                    width: 100% !important;
+                    left: 0 !important;
+                    top: auto !important;
+                    bottom: 0 !important;
+                    transform: none !important;
+                    border-radius: 20px 20px 0 0;
+                    z-index: 2500;
+                    box-shadow: 0 -10px 40px rgba(0,0,0,1);
+                    animation: slideUpMobile 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+                  }
+                  .form-header {
+                    padding: 20px 24px;
+                    background: #000;
+                  }
+                  .form-body {
+                    padding: 24px;
+                    padding-bottom: env(safe-area-inset-bottom, 32px);
+                  }
+                  .symbol-name { font-size: 24px; }
+                  .input-field input { padding: 14px; font-size: 16px; }
+                  .execute-btn { padding: 18px; font-size: 14px; }
+                }
+
+                @keyframes slideUpMobile {
+                  from { transform: translateY(100%); }
+                  to { transform: translateY(0); }
+                }
             `}</style>
         </div>
     );

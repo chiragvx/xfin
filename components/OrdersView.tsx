@@ -63,30 +63,42 @@ export default function OrdersView({
                 )}
             </div>
             <style jsx>{`
-        .status-filled { color: var(--accent); }
-        .status-open { color: #f1c40f; }
-        .status-cancelled { color: var(--muted); text-decoration: line-through; }
-        .status-rejected { color: var(--hazard); }
-        .bold { font-weight: bold; }
-        .p-16 { padding: 16px; }
-        .fs-10 { font-size: 10px; }
-        .fs-9 { font-size: 9px; }
-        .action-row { display: flex; gap: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 16px; font-size: 8px; color: var(--muted); font-family: var(--font-mono); font-weight: 800; letter-spacing: 0.15em; border-bottom: 1px solid var(--border); text-transform: uppercase; }
+        td { padding: 12px 16px; font-size: 11px; border-bottom: 1px solid rgba(255, 255, 255, 0.02); transition: var(--transition); }
+        tr:hover td { background: var(--glass); }
+        
+        .status-filled { color: var(--accent); text-shadow: var(--accent-glow); }
+        .status-open { color: #f59e0b; }
+        .status-cancelled { color: var(--muted); opacity: 0.6; }
+        .status-rejected { color: var(--hazard); text-shadow: var(--hazard-glow); }
+        
+        .bold { font-weight: 800; }
+        .action-row { display: flex; gap: 6px; }
         .action-btn {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--glass);
             border: 1px solid var(--border);
             color: var(--muted);
             font-size: 8px;
-            padding: 2px 6px;
+            padding: 4px 10px;
             cursor: pointer;
             font-family: var(--font-mono);
-            font-weight: bold;
+            font-weight: 900;
             border-radius: 2px;
-            transition: all 0.2s;
+            transition: var(--transition);
+            letter-spacing: 0.05em;
         }
-        .action-btn:hover { color: var(--foreground); border-color: var(--muted); background: rgba(255, 255, 255, 0.1); }
-        .action-btn.modify:hover { color: #f1c40f; border-color: #f1c40f; }
-        .action-btn.cancel:hover { color: var(--hazard); border-color: var(--hazard); }
+        .action-btn:hover { color: var(--foreground); border-color: var(--border-strong); background: var(--glass-hover); }
+        .action-btn.modify:hover { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow); }
+        .action-btn.cancel:hover { color: var(--hazard); border-color: var(--hazard); box-shadow: var(--hazard-glow); }
+
+        @media (max-width: 768px) {
+          th:nth-child(1), td:nth-child(1),
+          th:nth-child(2), td:nth-child(2),
+          th:nth-child(5), td:nth-child(5) { display: none; }
+          .action-btn { padding: 4px 12px; font-size: 10px; }
+          td { padding: 14px 10px; }
+        }
       `}</style>
         </div>
     );
