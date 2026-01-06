@@ -172,7 +172,7 @@ export default function Home() {
             </div>
           </div>
         );
-      case "EXPLORE": return <ExploreView onBuy={handleSelectSymbol} onSell={handleSelectSymbol} onAddToWatchlist={(s) => { ensureTicker(s); addSymbolToActiveWatchlist(s); }} onInfo={(s, p) => setDetailWindow({ symbol: s, price: p, isOpen: true, isMinimized: false })} />;
+      case "EXPLORE": return <ExploreView onBuy={handleSelectSymbol} onSell={handleSelectSymbol} onAddToWatchlist={(s: string) => { ensureTicker(s); addSymbolToActiveWatchlist(s); }} onInfo={(s: string, p: number) => setDetailWindow({ symbol: s, price: p, isOpen: true, isMinimized: false })} />;
       case "CHARTS": return <Panel title="MULTI_CHART_LAYOUT" padding="none"><ChartView /></Panel>;
       case "PORTFOLIO":
         return (

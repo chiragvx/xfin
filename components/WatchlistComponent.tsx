@@ -22,9 +22,9 @@ const WatchlistRow = ({
     isSelected
 }: {
     ticker: Ticker,
-    onSelectSymbol: any,
-    onAction: any,
-    onRemove: any,
+    onSelectSymbol: (symbol: string, ltp: number) => void,
+    onAction?: (action: 'BUY' | 'SELL' | 'INFO', symbol: string, ltp: number) => void,
+    onRemove: (symbol: string) => void,
     isSelected: boolean
 }) => {
     return (

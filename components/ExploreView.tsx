@@ -122,7 +122,14 @@ const POPULAR_ETFS: ExploreAsset[] = [
     { symbol: "GOLDBEES", name: "Nippon India ETF Gold BeES", type: "ETF", ltp: 52.45, change: 0.42, volume: "4.5M" },
 ];
 
-export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }: any) {
+interface ExploreViewProps {
+    onBuy: (symbol: string, price: number) => void;
+    onSell: (symbol: string, price: number) => void;
+    onAddToWatchlist: (symbol: string) => void;
+    onInfo: (symbol: string, price: number) => void;
+}
+
+export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }: ExploreViewProps) {
     return (
         <div className="explore-view">
             <div className="view-grid">
