@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { Panel } from "./ui/Panel";
 
 interface Trade {
     id: number;
@@ -40,58 +41,42 @@ export default function Tape({ symbol, currentPrice }: { symbol: string, current
     };
 
     return (
-        <div className="tape-terminal">
-            <div className="tape-header">
-                <span className="label">LIVE_EXECUTION_STREAM</span>
-                <span className="count">{trades.length}_TICKS</span>
-            </div>
+        <Panel title="LIVE_TAPE" subtitle={`${symbol} // ${trades.length} TICKS`} padding="none">
+            <div className="tape-terminal">
+                <div className="tape-labels">
+                    <span>TIME</span>
+                    <span>PRICE</span>
+                    <span style={{ textAlign: 'right' }}>SIZE</span>
+                </div>
 
-            <div className="tape-labels">
-                <span>TIME_UTC</span>
-                <span>PRICE</span>
-                <span>SIZE</span>
-            </div>
-
-            <div className="tape-list custom-scroll" ref={listRef}>
-                {trades.map((trade) => (
-                    <div
-                        key={trade.id}
-                        className={`tape-row clickable ${trade.side.toLowerCase()}`}
-                        onClick={() => handleTradeClick(trade.price)}
-                    >
-                        <div className={`side-indicator ${trade.side.toLowerCase()}`} />
-                        <span className="time mono">{trade.time}</span>
-                        <span className="price mono">{trade.price.toFixed(2)}</span>
-                        <span className="qty mono">{trade.qty}</span>
-                    </div>
-                ))}
+                <div className="tape-list custom-scroll" ref={listRef}>
+                    {trades.map((trade) => (
+                        <div
+                            key={trade.id}
+                            className={`tape-row clickable ${trade.side.toLowerCase()}`}
+                            onClick={() => handleTradeClick(trade.price)}
+                        >
+                            <span className="time mono">{trade.time}</span>
+                            <span className={`price mono bold ${trade.side.toLowerCase()}`}>
+                                {trade.price.toFixed(2)}
+                            </span>
+                            <span className="qty mono">{trade.qty}</span>
+                        </div>
+                    ))}
+                </div>
             </div>
 
             <style jsx>{`
-                .tape-terminal {
-                    display: flex;
-                    flex-direction: column;
-                    height: 100%;
-                    background: transparent;
-                }
-                .tape-header {
-                    padding: 8px 12px;
-                    display: flex;
-                    justify-content: space-between;
-                    background: var(--panel-header-bg);
-                    border-bottom: 1px solid var(--border);
-                }
-                .label { font-size: 8px; font-weight: 800; color: var(--muted); letter-spacing: 0.1em; }
-                .count { font-size: 8px; font-weight: 800; color: var(--accent); opacity: 0.6; }
-
+                .tape-terminal { display: flex; flex-direction: column; height: 100%; }
+                
                 .tape-labels {
                     display: grid;
                     grid-template-columns: 1.2fr 1fr 0.8fr;
-                    padding: 6px 12px;
-                    font-size: 7px;
-                    font-weight: 900;
-                    color: var(--muted);
-                    background: #000;
+                    padding: var(--space-1) var(--space-3);
+                    font-size: 8px;
+                    font-weight: 800;
+                    color: var(--fg-muted);
+                    background: var(--bg-primary);
                     border-bottom: 1px solid var(--border);
                 }
 
@@ -100,39 +85,25 @@ export default function Tape({ symbol, currentPrice }: { symbol: string, current
                 .tape-row {
                     display: grid;
                     grid-template-columns: 1.2fr 1fr 0.8fr;
-                    padding: 0 12px;
+                    padding: 0 var(--space-3);
                     height: 18px;
                     align-items: center;
-                    position: relative;
+                    border-bottom: 1px solid rgba(255,255,255,0.02);
                     transition: var(--transition);
-                    border-bottom: 1px solid rgba(255,255,255,0.01);
                 }
                 .tape-row.clickable { cursor: pointer; }
-                .tape-row:hover { background: var(--glass-hover); }
+                .tape-row:hover { background: var(--bg-tertiary); }
                 
-                .side-indicator {
-                    position: absolute;
-                    left: 0;
-                    top: 2px;
-                    bottom: 2px;
-                    width: 2px;
-                    border-radius: 0 1px 1px 0;
-                }
-                .side-indicator.buy { background: var(--accent); box-shadow: var(--accent-glow); }
-                .side-indicator.sell { background: var(--hazard); box-shadow: var(--hazard-glow); }
+                .time { font-size: 9px; color: var(--fg-muted); }
+                .price { font-size: 10px; }
+                .qty { font-size: 10px; text-align: right; color: var(--fg-secondary); }
 
-                .tape-row.buy .price { color: var(--accent); }
-                .tape-row.sell .price { color: var(--hazard); }
-
-                .time { font-size: 9px; color: var(--muted); opacity: 0.6; }
-                .price { font-size: 10px; font-weight: 800; }
-                .qty { font-size: 10px; text-align: right; color: var(--foreground); }
+                .buy { color: var(--accent); }
+                .sell { color: var(--hazard); }
 
                 .mono { font-family: var(--font-mono); }
-                .custom-scroll::-webkit-scrollbar { width: 3px; }
-                .custom-scroll::-webkit-scrollbar-track { background: transparent; }
-                .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+                .bold { font-weight: 700; }
             `}</style>
-        </div>
+        </Panel>
     );
 }
