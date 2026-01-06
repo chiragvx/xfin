@@ -25,12 +25,19 @@ export type ViewType = "TRADE" | "EXPLORE" | "PORTFOLIO" | "CHARTS" | "ORDERS" |
 
 const StatusBar = () => (
   <div className="status-bar">
-    <div className="status-item"><span className="muted">MODE:</span> <span className="success shadow-accent">LIVE_TERMINAL</span></div>
+    <div className="status-item"><div className="heartbeat"></div> <span className="muted">MODE:</span> <span className="success shadow-accent">LIVE_TERMINAL</span></div>
     <div className="status-item"><span className="muted">CONNECTION:</span> <span className="success shadow-accent">ENCRYPTED_SSL</span></div>
-    <div className="status-item"><span className="muted">SERVER:</span> <span>BRK_MUMBAI_01</span></div>
+    <div className="status-item desk-only"><span className="muted">SERVER:</span> <span>BRK_MUMBAI_01</span></div>
+    <div className="status-item desk-only"><span className="muted">LATENCY:</span> <span className="success">14ms</span></div>
     <div className="status-item" style={{ marginLeft: 'auto' }}>
       <span className="muted">LOCAL_TIME:</span> <span className="mono">{new Date().toLocaleTimeString()}</span>
     </div>
+    <style jsx>{`
+      .heartbeat { width: 4px; height: 4px; background: var(--accent); border-radius: 50%; display: inline-block; margin-right: 8px; box-shadow: var(--accent-glow); animation: pulse-dot 1.5s infinite; vertical-align: middle; }
+      @keyframes pulse-dot { 0% { opacity: 0.2; transform: scale(0.8); } 50% { opacity: 1; transform: scale(1.2); } 100% { opacity: 0.2; transform: scale(0.8); } }
+      .desk-only { display: flex; }
+      @media (max-width: 600px) { .desk-only { display: none; } }
+    `}</style>
   </div>
 );
 
@@ -257,11 +264,11 @@ export default function Home() {
                   <div className="depth-view-container">
                     <div className="depth-col">
                       <div className="sub-header">ORDER_BOOK</div>
-                      <OrderBook symbol={activeSymbol} ltp={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
+                      <OrderBook symbol={activeSymbol} currentPrice={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
                     </div>
                     <div className="depth-col">
                       <div className="sub-header">TIME_&_SALES</div>
-                      <Tape symbol={activeSymbol} ltp={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
+                      <Tape symbol={activeSymbol} currentPrice={tickers.find(t => t.symbol === activeSymbol)?.ltp || 0} />
                     </div>
                   </div>
                 )}

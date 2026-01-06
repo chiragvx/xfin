@@ -1,18 +1,14 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
-export const metadata: Metadata = {
-    title: "LedgerOne | Execution Console",
-    description: "A text-first, keyboard-native web brokerage interface.",
-};
-
-import StatusBarTimer from "@/components/StatusBarTimer";
-import CommandPalette from "@/components/CommandPalette";
-
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { MarketProvider } from "@/context/MarketContext";
 import { WatchlistProvider } from "@/context/WatchlistContext";
 import { PortfolioProvider } from "@/context/PortfolioContext";
+
+export const metadata: Metadata = {
+    title: "LedgerOne | Tactical Execution Console",
+    description: "The next generation text-first, keyboard-native brokerage terminal for professionals.",
+};
 
 export default function RootLayout({
     children,
@@ -26,22 +22,14 @@ export default function RootLayout({
                     rel="stylesheet"
                     href="https://cdn.jsdelivr.net/npm/@fontsource/jetbrains-mono@5.0.0/index.min.css"
                 />
+                <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
             </head>
             <body>
                 <ThemeProvider>
                     <MarketProvider>
                         <WatchlistProvider>
                             <PortfolioProvider>
-                                <CommandPalette />
-                                <main className="shell">
-                                    {children}
-                                </main>
-                                <footer className="status-bar">
-                                    <div className="status-item">LEDGER-ONE V1.1.0</div>
-                                    <div className="status-item">SYSTEM: OK</div>
-                                    <div className="status-item">FEED: LIVE</div>
-                                    <StatusBarTimer />
-                                </footer>
+                                {children}
                             </PortfolioProvider>
                         </WatchlistProvider>
                     </MarketProvider>

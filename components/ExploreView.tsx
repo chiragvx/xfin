@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { TrendingUp, TrendingDown, Plus, Info, Zap } from "lucide-react";
 
 interface ExploreAsset {
     symbol: string;
@@ -26,8 +26,13 @@ function ExploreWidget({ title, subtitle, assets, onBuy, onSell, onAddToWatchlis
     return (
         <div className="explore-widget">
             <div className="widget-header">
-                <h3>{title}</h3>
-                <span className="subtitle">{subtitle}</span>
+                <div className="header-icon">
+                    <Zap size={10} />
+                </div>
+                <div className="header-text">
+                    <h3>{title}</h3>
+                    <span className="subtitle">{subtitle}</span>
+                </div>
             </div>
             <div className="widget-content">
                 <table>
@@ -37,7 +42,7 @@ function ExploreWidget({ title, subtitle, assets, onBuy, onSell, onAddToWatchlis
                             <th>LTP</th>
                             <th>CHG%</th>
                             <th>VOL</th>
-                            <th></th>
+                            <th>ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -49,18 +54,20 @@ function ExploreWidget({ title, subtitle, assets, onBuy, onSell, onAddToWatchlis
                                         <span className="asset-type">{asset.type}</span>
                                     </div>
                                 </td>
-                                <td className="mono">₹{asset.ltp.toFixed(2)}</td>
+                                <td className="mono ltp-cell">₹{asset.ltp.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                                 <td className={`mono ${asset.change >= 0 ? 'success' : 'hazardous'}`}>
-                                    {asset.change >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
-                                    {asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%
+                                    <div className="change-content">
+                                        {asset.change >= 0 ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
+                                        <span>{asset.change >= 0 ? '+' : ''}{asset.change.toFixed(2)}%</span>
+                                    </div>
                                 </td>
-                                <td className="mono muted">{asset.volume}</td>
+                                <td className="mono muted volume-cell">{asset.volume}</td>
                                 <td>
-                                    <div className="action-group">
-                                        <button className="quick-action buy" onClick={() => onBuy(asset.symbol, asset.ltp)} title="BUY">B</button>
-                                        <button className="quick-action sell" onClick={() => onSell(asset.symbol, asset.ltp)} title="SELL">S</button>
-                                        <button className="quick-action watchlist" onClick={() => onAddToWatchlist(asset.symbol)} title="ADD TO WATCHLIST">+</button>
-                                        <button className="quick-action info" onClick={() => onInfo(asset.symbol, asset.ltp)} title="INFO">i</button>
+                                    <div className="action-row">
+                                        <button className="q-btn buy" onClick={() => onBuy(asset.symbol, asset.ltp)}>B</button>
+                                        <button className="q-btn sell" onClick={() => onSell(asset.symbol, asset.ltp)}>S</button>
+                                        <button className="q-btn info" onClick={() => onInfo(asset.symbol, asset.ltp)}><Info size={10} /></button>
+                                        <button className="q-btn wl" onClick={() => onAddToWatchlist(asset.symbol)}><Plus size={10} /></button>
                                     </div>
                                 </td>
                             </tr>
@@ -70,96 +77,110 @@ function ExploreWidget({ title, subtitle, assets, onBuy, onSell, onAddToWatchlis
             </div>
             <style jsx>{`
                 .explore-widget {
-                    background: var(--panel-bg);
+                    background: var(--glass);
                     border: 1px solid var(--border);
-                    border-radius: 4px;
+                    border-radius: var(--radius-md);
                     overflow: hidden;
+                    transition: var(--transition);
+                }
+                .explore-widget:hover {
+                    border-color: var(--border-strong);
+                    background: rgba(255, 255, 255, 0.02);
                 }
                 .widget-header {
                     background: var(--panel-header-bg);
                     padding: 12px 16px;
                     border-bottom: 1px solid var(--border);
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .header-icon {
+                    width: 20px;
+                    height: 20px;
+                    background: var(--accent-soft);
+                    color: var(--accent);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 4px;
+                    border: 1px solid var(--accent-soft);
                 }
                 .widget-header h3 {
                     margin: 0;
-                    font-size: 10px;
-                    font-weight: 600;
+                    font-size: 9px;
+                    font-weight: 800;
                     font-family: var(--font-mono);
-                    letter-spacing: 0.1em;
+                    letter-spacing: 0.15em;
+                    color: var(--foreground);
                 }
                 .subtitle {
-                    font-size: 10px;
+                    font-size: 8px;
                     color: var(--muted);
                     font-family: var(--font-mono);
-                    margin-top: 2px;
-                    display: block;
+                    letter-spacing: 0.05em;
                 }
-                .widget-content { overflow-x: auto; }
+                
                 table { width: 100%; border-collapse: collapse; }
                 th {
                     text-align: left;
-                    padding: 8px 12px;
-                    font-size: 9px;
+                    padding: 10px 14px;
+                    font-size: 8px;
                     color: var(--muted);
                     font-family: var(--font-mono);
-                    font-weight: 600;
+                    font-weight: 800;
                     border-bottom: 1px solid var(--border);
+                    letter-spacing: 0.1em;
+                    text-transform: uppercase;
                 }
                 td {
-                    padding: 10px 12px;
+                    padding: 10px 14px;
                     font-size: 11px;
-                    border-bottom: 1px solid rgba(255,255,255,0.02);
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+                    transition: var(--transition);
                 }
-                tr:hover { background: rgba(255,255,255,0.02); }
+                tr:hover td { background: rgba(255, 255, 255, 0.03); }
+                
                 .symbol-cell { display: flex; flex-direction: column; gap: 2px; }
-                .symbol-name { font-weight: 600; font-size: 11px; font-family: var(--font-mono); }
-                .asset-type { font-size: 9px; color: var(--muted); font-family: var(--font-mono); }
+                .symbol-name { font-weight: 800; font-size: 11px; font-family: var(--font-mono); color: var(--foreground); }
+                .asset-type { font-size: 8px; color: var(--muted); font-family: var(--font-mono); font-weight: 700; opacity: 0.7; }
                 
-                .action-group { 
-                    display: flex; 
-                    gap: 4px; 
+                .ltp-cell { font-weight: 700; color: var(--foreground); }
+                .change-content { display: flex; align-items: center; gap: 6px; font-weight: 800; }
+                
+                .action-row {
+                    display: flex;
+                    gap: 4px;
                     opacity: 0;
-                    transition: opacity 0.15s;
+                    transition: var(--transition);
+                    justify-content: flex-end;
                 }
-                tr:hover .action-group { opacity: 1; }
+                tr:hover .action-row { opacity: 1; }
                 
-                @media (hover: none) {
-                    .action-group { opacity: 1; }
-                }
-
-                @media (max-width: 480px) {
-                    .muted.mono:not(.success):not(.hazardous) { display: none; }
-                    th:nth-child(4), td:nth-child(4) { display: none; }
-                    .quick-action { width: 24px; height: 24px; font-size: 10px; }
-                    td { padding: 8px; }
-                }
-
-                .quick-action {
-                    width: 20px;
-                    height: 20px;
+                .q-btn {
+                    width: 22px;
+                    height: 22px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     border: 1px solid var(--border);
-                    background: transparent;
+                    background: var(--glass);
                     color: var(--muted);
-                    font-size: 9px;
-                    font-weight: 700;
+                    font-size: 8px;
+                    font-weight: 900;
                     font-family: var(--font-mono);
                     border-radius: 2px;
                     cursor: pointer;
-                    transition: all 0.15s;
+                    transition: var(--transition);
                 }
-                .quick-action:hover { transform: scale(1.05); }
-                .quick-action.buy:hover { background: var(--accent); color: #000; border-color: var(--accent); }
-                .quick-action.sell:hover { background: var(--hazard); color: #000; border-color: var(--hazard); }
-                .quick-action.watchlist:hover { background: #3498db; color: #fff; border-color: #3498db; }
-                .quick-action.info:hover { background: #9b59b6; color: #fff; border-color: #9b59b6; }
+                .q-btn:hover { color: var(--foreground); border-color: var(--border-strong); background: var(--glass-hover); }
+                .q-btn.buy:hover { color: var(--accent); border-color: var(--accent); box-shadow: var(--accent-glow); }
+                .q-btn.sell:hover { color: var(--hazard); border-color: var(--hazard); box-shadow: var(--hazard-glow); }
 
-                .mono { font-family: var(--font-mono); }
-                .muted { color: var(--muted); }
-                .success { color: var(--accent); display: flex; align-items: center; gap: 4px; }
-                .hazardous { color: var(--hazard); display: flex; align-items: center; gap: 4px; }
+                @media (max-width: 600px) {
+                    .volume-cell { display: none; }
+                    .action-row { opacity: 1; }
+                }
             `}</style>
         </div>
     );
@@ -211,14 +232,15 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
     return (
         <div className="explore-container">
             <div className="explore-header">
-                <h1>EXPLORE</h1>
-                <p>Discover trading opportunities</p>
+                <div className="header-badge">LIVE_DATA</div>
+                <h1>EXPLORE // DISCOVER_ASSETS</h1>
+                <p>Real-time market insights and volatility monitoring</p>
             </div>
 
             <div className="explore-grid">
                 <ExploreWidget
                     title="TOP_GAINERS"
-                    subtitle="Highest performers today"
+                    subtitle="Bullish momentum leaders"
                     assets={TOP_GAINERS}
                     onBuy={onBuy}
                     onSell={onSell}
@@ -228,7 +250,7 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
 
                 <ExploreWidget
                     title="TOP_LOSERS"
-                    subtitle="Biggest decliners"
+                    subtitle="Bearish trend alerts"
                     assets={TOP_LOSERS}
                     onBuy={onBuy}
                     onSell={onSell}
@@ -237,8 +259,8 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
                 />
 
                 <ExploreWidget
-                    title="OPTIONS"
-                    subtitle="High volume contracts"
+                    title="OPTIONS_FLOW"
+                    subtitle="High liquidity contracts"
                     assets={POPULAR_OPTIONS}
                     onBuy={onBuy}
                     onSell={onSell}
@@ -247,8 +269,8 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
                 />
 
                 <ExploreWidget
-                    title="ETFs"
-                    subtitle="Exchange traded funds"
+                    title="ETF_SECTORS"
+                    subtitle="Exchange traded indices"
                     assets={POPULAR_ETFS}
                     onBuy={onBuy}
                     onSell={onSell}
@@ -257,8 +279,8 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
                 />
 
                 <ExploreWidget
-                    title="FUTURES"
-                    subtitle="Active contracts"
+                    title="FUTURES_WATCH"
+                    subtitle="Derivative market active contracts"
                     assets={FUTURES_WATCH}
                     onBuy={onBuy}
                     onSell={onSell}
@@ -269,40 +291,57 @@ export default function ExploreView({ onBuy, onSell, onAddToWatchlist, onInfo }:
 
             <style jsx>{`
                 .explore-container {
-                    padding: 24px;
+                    padding: 32px;
                     overflow-y: auto;
                     height: 100%;
+                    background: transparent;
                 }
                 .explore-header {
-                    margin-bottom: 24px;
+                    margin-bottom: 32px;
+                    position: relative;
+                }
+                .header-badge {
+                    display: inline-block;
+                    padding: 2px 8px;
+                    background: var(--accent-soft);
+                    color: var(--accent);
+                    font-size: 7px;
+                    font-weight: 900;
+                    letter-spacing: 0.2em;
+                    border-radius: 2px;
+                    margin-bottom: 12px;
+                    border: 1px solid var(--accent);
                 }
                 .explore-header h1 {
-                    font-size: 14px;
-                    font-weight: 600;
+                    font-size: 18px;
+                    font-weight: 800;
                     font-family: var(--font-mono);
-                    letter-spacing: 0.1em;
-                    margin: 0 0 4px 0;
+                    letter-spacing: -0.02em;
+                    margin: 0 0 6px 0;
+                    color: var(--foreground);
                 }
                 .explore-header p {
                     color: var(--muted);
                     font-size: 11px;
                     font-family: var(--font-mono);
                     margin: 0;
+                    letter-spacing: 0.02em;
                 }
                 .explore-grid {
                     display: grid;
-                    grid-template-columns: 1fr 1fr;
-                    gap: 16px;
+                    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+                    gap: 20px;
                 }
 
-                @media (max-width: 1024px) {
+                @media (max-width: 1100px) {
                     .explore-grid { grid-template-columns: 1fr; }
                 }
 
                 @media (max-width: 768px) {
-                    .explore-container { padding: 16px; padding-bottom: 80px; }
-                    .explore-header { margin-bottom: 16px; }
-                    .explore-grid { gap: 12px; }
+                    .explore-container { padding: 20px; padding-bottom: 100px; }
+                    .explore-header { margin-bottom: 24px; }
+                    .explore-grid { gap: 16px; }
+                    .explore-header h1 { font-size: 16px; }
                 }
             `}</style>
         </div>
