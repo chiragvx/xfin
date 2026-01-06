@@ -84,7 +84,9 @@ function ExploreWidget({ title, subtitle, assets, onBuy, onSell, onAddToWatchlis
                     font-size: 11px; 
                     border-bottom: 1px solid rgba(255,255,255,0.02); 
                 }
-                tr:hover td { background: var(--bg-tertiary); }
+                @media (hover: hover) {
+                    tr:hover td { background: var(--bg-tertiary); }
+                }
                 
                 .symbol-cell { display: flex; flex-direction: column; }
                 .fs-8 { font-size: 8px; }

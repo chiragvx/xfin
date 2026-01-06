@@ -73,8 +73,16 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           overflow: hidden;
         }
 
-        .tui-sidebar:hover {
-          width: 180px;
+        @media (hover: hover) {
+          .tui-sidebar:hover {
+            width: 180px;
+          }
+          .tui-sidebar:hover .nav-text {
+            opacity: 1;
+          }
+          .tui-sidebar:hover .nav-sh {
+            opacity: 1;
+          }
         }
 
         .sidebar-top {
@@ -119,10 +127,12 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           position: relative;
         }
 
-        .nav-button:hover {
-          background: var(--bg-secondary);
-          color: var(--fg-primary);
-          border-color: var(--border);
+        @media (hover: hover) {
+          .nav-button:hover {
+            background: var(--bg-secondary);
+            color: var(--fg-primary);
+            border-color: var(--border);
+          }
         }
 
         .nav-button.active {
@@ -151,9 +161,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           transition: 0.2s;
         }
 
-        .tui-sidebar:hover .nav-text {
-          opacity: 1;
-        }
 
         .nav-sh {
           margin-left: auto;
@@ -166,9 +173,6 @@ export default function Sidebar({ activeView, onViewChange }: SidebarProps) {
           opacity: 0;
         }
 
-        .tui-sidebar:hover .nav-sh {
-          opacity: 1;
-        }
 
         .sidebar-bottom {
             padding: 0 var(--space-2);

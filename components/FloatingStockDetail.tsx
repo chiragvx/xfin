@@ -159,7 +159,7 @@ export default function FloatingStockDetail({
 
                 <div className="viewport">
                     {activeView === 'chart' && <PriceChart symbol={symbol} data={chartData} />}
-                    {activeView === 'chain' && <div className="scroll-y"><OptionChain symbol={symbol} currentPrice={price} onSelectOption={onSelectOption} /></div>}
+                    {activeView === 'chain' && <OptionChain symbol={symbol} currentPrice={price} onSelectOption={onSelectOption} />}
                     {activeView === 'analysis' && <AnalysisContainer symbol={symbol} />}
                 </div>
 

@@ -4,54 +4,77 @@ import React, { useMemo } from 'react';
 import * as THREE from 'three';
 
 interface OptionSurfaceProps {
-    data: number[][]; // Grid of values
+    data: number[][];
     size: number;
+    bounds: { z: [number, number] };
     color?: string;
-    onHover?: (strike: number, time: number, value: number) => void;
+    onHover?: (strikeIndex: number, timeIndex: number, value: number) => void;
 }
 
-export default function OptionSurface({ data, size, color = "#3b82f6", onHover }: OptionSurfaceProps) {
-    const geometry = useMemo(() => {
+export default function OptionSurface({ data, size, bounds, color = "#3b82f6", onHover }: OptionSurfaceProps) {
+    const { geometry, colors } = useMemo(() => {
         const segments = data.length - 1;
         const geo = new THREE.PlaneGeometry(size, size, segments, segments);
         const vertices = geo.attributes.position.array;
+        const vertexColors = new Float32Array(vertices.length);
+
+        const [minZ, maxZ] = bounds.z;
+        const rangeZ = maxZ - minZ || 1;
+        const visualHeightMax = size / 2.5;
 
         for (let i = 0; i < data.length; i++) {
             for (let j = 0; j < data[i].length; j++) {
-                const index = (i * data.length + j) * 3;
-                vertices[index + 2] = data[i][j];
+                // In PlaneGeometry, vertices are ordered row by row
+                // But we need to match data[i][j] correctly
+                // PlaneGeometry vertex order: top-left to bottom-right
+                const vertexIndex = (i * data.length + j);
+                const attrIndex = vertexIndex * 3;
+
+                const val = data[i][j];
+                // Normalize value to visual height
+                const normalized = (val - minZ) / rangeZ;
+                const visualHeight = Math.max(0, Math.min(1, normalized)) * visualHeightMax;
+
+                vertices[attrIndex + 2] = visualHeight;
+
+                // Color based on height (heat map style)
+                const baseColor = new THREE.Color(color);
+                if (normalized > 0.7) baseColor.brighten && baseColor.lerp(new THREE.Color('#fff'), 0.3);
+                vertexColors[attrIndex] = baseColor.r;
+                vertexColors[attrIndex + 1] = baseColor.g;
+                vertexColors[attrIndex + 2] = baseColor.b;
             }
         }
 
         geo.computeVertexNormals();
-        return geo;
-    }, [data, size]);
+        geo.setAttribute('color', new THREE.BufferAttribute(vertexColors, 3));
+        return { geometry: geo, colors: vertexColors };
+    }, [data, size, bounds, color]);
 
     return (
         <mesh
             geometry={geometry}
             rotation={[-Math.PI / 2, 0, 0]}
             onPointerMove={(e) => {
-                if (onHover && e.face) {
-                    // Extract data based on U,V or intersection point
-                    // For simplicity, we'll map the position back to data indices
-                    const x = (e.point.x / (size / 2)) * (data.length / 2) + (data.length / 2);
-                    const z = (e.point.z / (size / 2)) * (data[0].length / 2) + (data[0].length / 2);
-                    const i = Math.floor(Math.max(0, Math.min(data.length - 1, x)));
-                    const j = Math.floor(Math.max(0, Math.min(data[0].length - 1, z)));
-                    onHover(i, j, data[i][j]);
+                if (onHover && e.uv) {
+                    // UV mapping is much more reliable than point mapping for planes
+                    const i = Math.floor(e.uv.x * (data.length - 1));
+                    const j = Math.floor((1 - e.uv.y) * (data[0].length - 1));
+                    if (data[i] && data[i][j] !== undefined) {
+                        onHover(i, j, data[i][j]);
+                    }
                 }
             }}
             onPointerOut={() => onHover && onHover(-1, -1, 0)}
         >
-            <meshPhongMaterial
-                color={color}
+            <meshStandardMaterial
+                vertexColors
                 side={THREE.DoubleSide}
-                wireframe={false}
                 transparent
-                opacity={0.8}
-                shininess={20}
-                specular={new THREE.Color(color).multiplyScalar(0.5)}
+                opacity={0.85}
+                roughness={0.2}
+                metalness={0.5}
+                envMapIntensity={1}
             />
         </mesh>
     );

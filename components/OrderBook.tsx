@@ -115,7 +115,9 @@ export default function OrderBook({ symbol, currentPrice }: { symbol: string, cu
                     position: relative;
                     transition: var(--transition);
                 }
-                .ob-row:hover { background: var(--bg-tertiary); }
+                @media (hover: hover) {
+                    .ob-row:hover { background: var(--bg-tertiary); }
+                }
                 
                 .depth-bar { position: absolute; top: 0; bottom: 0; z-index: 0; transition: width 0.2s ease; }
                 

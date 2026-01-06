@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { ChevronDown, Activity, BarChart3, Info } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 interface OptionChainProps {
     symbol: string;
@@ -36,7 +36,14 @@ interface OptionData {
 const generateMockOptionChain = (basePrice: number): OptionData[] => {
     const strikes = [];
     const strikeInterval = 50;
-    const startStrike = Math.floor(basePrice / strikeInterval) * strikeInterval - 500;
+    const centerStrike = Math.round(basePrice / strikeInterval) * strikeInterval;
+    const startStrike = centerStrike - 500;
+
+    // Deterministic "random" based on strike for hydration safety
+    const detSeed = (s: number, offset: number) => {
+        const x = Math.sin(s + offset) * 10000;
+        return x - Math.floor(x);
+    };
 
     for (let i = 0; i < 21; i++) {
         const strike = startStrike + i * strikeInterval;
@@ -46,24 +53,24 @@ const generateMockOptionChain = (basePrice: number): OptionData[] => {
         strikes.push({
             strike,
             call: {
-                oi: Math.floor(Math.random() * 50000),
-                oiChng: Math.floor((Math.random() - 0.5) * 10000),
-                volume: Math.floor(Math.random() * 100000),
-                iv: 15 + Math.random() * 10,
-                ltp: isITMCall ? (basePrice - strike) + 20 : 5 + Math.random() * 15,
-                chng: (Math.random() - 0.5) * 5,
-                delta: Math.random() * 0.5 + (isITMCall ? 0.5 : 0),
-                theta: -(Math.random() * 2),
+                oi: Math.floor(detSeed(strike, 1) * 50000),
+                oiChng: Math.floor((detSeed(strike, 2) - 0.5) * 10000),
+                volume: Math.floor(detSeed(strike, 3) * 100000),
+                iv: 15 + detSeed(strike, 4) * 10,
+                ltp: isITMCall ? Math.abs(basePrice - strike) + 10 : 2 + detSeed(strike, 5) * 10,
+                chng: (detSeed(strike, 6) - 0.5) * 5,
+                delta: detSeed(strike, 7) * 0.5 + (isITMCall ? 0.5 : 0),
+                theta: -(detSeed(strike, 8) * 2),
             },
             put: {
-                oi: Math.floor(Math.random() * 50000),
-                oiChng: Math.floor((Math.random() - 0.5) * 10000),
-                volume: Math.floor(Math.random() * 100000),
-                iv: 15 + Math.random() * 10,
-                ltp: isITMPut ? (strike - basePrice) + 20 : 5 + Math.random() * 15,
-                chng: (Math.random() - 0.5) * 5,
-                delta: -(Math.random() * 0.5 + (isITMPut ? 0.5 : 0)),
-                theta: -(Math.random() * 2),
+                oi: Math.floor(detSeed(strike, 9) * 50000),
+                oiChng: Math.floor((detSeed(strike, 10) - 0.5) * 10000),
+                volume: Math.floor(detSeed(strike, 11) * 100000),
+                iv: 15 + detSeed(strike, 12) * 10,
+                ltp: isITMPut ? Math.abs(strike - basePrice) + 10 : 2 + detSeed(strike, 13) * 10,
+                chng: (detSeed(strike, 14) - 0.5) * 5,
+                delta: -(detSeed(strike, 15) * 0.5 + (isITMPut ? 0.5 : 0)),
+                theta: -(detSeed(strike, 16) * 2),
             }
         });
     }
@@ -75,213 +82,190 @@ type ViewMode = 'LTP' | 'Greeks' | 'OI';
 export default function OptionChain({ symbol, currentPrice, onSelectOption }: OptionChainProps) {
     const [viewMode, setViewMode] = useState<ViewMode>('LTP');
     const [expiry] = useState('25-Jan-2026');
-    const [hoverState, setHoverState] = useState<{ strike: number | null, side: 'call' | 'put' | null }>({ strike: null, side: null });
-
     const data = useMemo(() => generateMockOptionChain(currentPrice), [currentPrice]);
     const [mobileSide, setMobileSide] = useState<'CE' | 'PE'>('CE');
+    const [isMobile, setIsMobile] = useState(false);
+    const [hasMounted, setHasMounted] = useState(false);
+
+    useEffect(() => {
+        setHasMounted(true);
+        const checkMobile = () => setIsMobile(window.innerWidth <= 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    if (!hasMounted) return <div className="diagnostics-loading mono" style={{ height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--fg-muted)' }}>LOADING_DIAGNOSTICS...</div>;
 
     const handleOptionSelect = (type: 'CE' | 'PE', strike: number, price: number) => {
         const baseSymbol = symbol.split(' ')[0];
         onSelectOption(`${baseSymbol} ${type} ${strike}`, price);
     };
 
+    // Table Logic:
+    // Desktop: [CE_IV, CE_LTP, CE_CHG] [STRIKE] [PE_LTP, PE_CHG, PE_IV]
+    // Mobile:  [STRIKE] [ACTIVE_LTP, ACTIVE_CHG] (IV hidden)
+
     return (
-        <div className="option-chain-container">
-            <div className="chain-top-bar">
-                <div className="left-controls">
-                    <div className="control-item">
-                        <span className="label">Expiry</span>
-                        <div className="dropdown">
-                            {expiry} <ChevronDown size={12} />
-                        </div>
+        <div className="option-chain">
+            <div className="chain-header">
+                <div className="header-left">
+                    <div className="expiry-selector">
+                        <span className="label">EXPIRY</span>
+                        <div className="expiry-val mono bold">{expiry} <ChevronDown size={10} /></div>
                     </div>
                 </div>
 
-                <div className="view-switcher">
-                    <button
-                        className={viewMode === 'LTP' ? 'active' : ''}
-                        onClick={() => setViewMode('LTP')}
-                    >
-                        <Activity size={12} /> Quote
-                    </button>
-                    <button
-                        className={viewMode === 'Greeks' ? 'active' : ''}
-                        onClick={() => setViewMode('Greeks')}
-                    >
-                        <Info size={12} /> Greeks
-                    </button>
-                    <button
-                        className={viewMode === 'OI' ? 'active' : ''}
-                        onClick={() => setViewMode('OI')}
-                    >
-                        <BarChart3 size={12} /> Volume
-                    </button>
+                <div className="header-center">
+                    <div className="view-selector">
+                        <button className={viewMode === 'LTP' ? 'active' : ''} onClick={() => setViewMode('LTP')}>QUOTE</button>
+                        <button className={viewMode === 'Greeks' ? 'active' : ''} onClick={() => setViewMode('Greeks')}>GREEKS</button>
+                        <button className={viewMode === 'OI' ? 'active' : ''} onClick={() => setViewMode('OI')}>OI/VOL</button>
+                    </div>
                 </div>
 
-                <div className="mobile-side-toggle">
-                    <button className={mobileSide === 'CE' ? 'active ce' : ''} onClick={() => setMobileSide('CE')}>CE</button>
-                    <button className={mobileSide === 'PE' ? 'active pe' : ''} onClick={() => setMobileSide('PE')}>PE</button>
-                </div>
-
-                <div className="market-price">
-                    <span className="label">Spot</span>
-                    <span className="val">₹{currentPrice.toFixed(2)}</span>
+                <div className="header-right desktop-only">
+                    <div className="spot-price mono">
+                        <span className="label">SPOT:</span>
+                        <span className="val bold success">₹{currentPrice.toFixed(2)}</span>
+                    </div>
                 </div>
             </div>
 
-            <div className="table-wrapper">
-                <table className="compact-table">
+            <div className="mobile-side-tabs">
+                <button className={mobileSide === 'CE' ? 'active ce' : ''} onClick={() => setMobileSide('CE')}>CALLS (CE)</button>
+                <button className={mobileSide === 'PE' ? 'active pe' : ''} onClick={() => setMobileSide('PE')}>PUTS (PE)</button>
+            </div>
+
+            <div className="table-container custom-scroll">
+                <table>
                     <thead>
-                        <tr className="side-headers">
-                            <th colSpan={viewMode === 'LTP' ? 3 : viewMode === 'Greeks' ? 3 : 4} className="call-side desktop-only">CALLS</th>
-                            <th className="strike-header">STRIKE</th>
-                            <th colSpan={viewMode === 'LTP' ? 3 : viewMode === 'Greeks' ? 3 : 4} className="put-side desktop-only">PUTS</th>
-                            <th className="mobile-only">{mobileSide === 'CE' ? 'CALLS' : 'PUTS'}</th>
+                        {/* Desktop Side Headers */}
+                        <tr className="main-heads desktop-only">
+                            <th colSpan={3} className="ce-side">CALL_OPTIONS (CE)</th>
+                            <th className="strike-head">STRIKE</th>
+                            <th colSpan={3} className="pe-side">PUT_OPTIONS (PE)</th>
                         </tr>
-                        <tr className="metric-headers">
-                            <React.Fragment>
-                                {viewMode === 'LTP' && <>
-                                    <th className="desktop-only">IV</th>
-                                    <th className="desktop-only">LTP</th>
-                                    <th className="desktop-only">CHNG%</th>
-                                </>}
-                                {viewMode === 'Greeks' && <>
-                                    <th className="desktop-only">IV</th>
-                                    <th className="desktop-only">DELTA</th>
-                                    <th className="desktop-only">THETA</th>
-                                </>}
-                                {viewMode === 'OI' && <>
-                                    <th className="desktop-only">OI</th>
-                                    <th className="desktop-only">CHNG OI</th>
-                                    <th className="desktop-only">VOL</th>
-                                    <th className="desktop-only">IV</th>
-                                </>}
-                            </React.Fragment>
+                        {/* Metric Headers */}
+                        <tr className="metric-heads">
+                            {/* CE Headers (Desktop Only) */}
+                            {viewMode === 'LTP' && (
+                                <>
+                                    <th className="desktop-only text-center">IV</th>
+                                    <th className="desktop-only text-right">LTP</th>
+                                    <th className="desktop-only text-right">CHG%</th>
+                                </>
+                            )}
+                            {viewMode === 'Greeks' && (
+                                <>
+                                    <th className="desktop-only text-center">IV</th>
+                                    <th className="desktop-only text-right">DELTA</th>
+                                    <th className="desktop-only text-right">THETA</th>
+                                </>
+                            )}
+                            {viewMode === 'OI' && (
+                                <>
+                                    <th className="desktop-only text-right">OI</th>
+                                    <th className="desktop-only text-right">CHG_OI</th>
+                                    <th className="desktop-only text-right">VOL</th>
+                                </>
+                            )}
 
-                            <th className="strike-col">PRICE</th>
+                            {/* Strike Header (Shared) */}
+                            <th className="strike-head">PRICE</th>
 
-                            <React.Fragment>
-                                {viewMode === 'LTP' && <>
-                                    <th>LTP</th>
-                                    <th>CHNG%</th>
-                                    <th className="desktop-only">IV</th>
-                                </>}
-                                {viewMode === 'Greeks' && <>
-                                    <th>DELTA</th>
-                                    <th>THETA</th>
-                                    <th className="desktop-only">IV</th>
-                                </>}
-                                {viewMode === 'OI' && <>
-                                    <th className="desktop-only">IV</th>
-                                    <th>VOL</th>
-                                    <th>CHNG OI</th>
-                                    <th>OI</th>
-                                </>}
-                            </React.Fragment>
+                            {/* Active Side Headers (Shared/PE) */}
+                            {viewMode === 'LTP' && (
+                                <>
+                                    <th className="text-right">{(!isMobile || mobileSide === 'PE') ? 'LTP' : 'CE_LTP'}</th>
+                                    <th className="text-right">CHG%</th>
+                                    <th className="desktop-only text-center">IV</th>
+                                </>
+                            )}
+                            {viewMode === 'Greeks' && (
+                                <>
+                                    <th className="text-right">{(!isMobile || mobileSide === 'PE') ? 'DELTA' : 'CE_DELTA'}</th>
+                                    <th className="text-right">THETA</th>
+                                    <th className="desktop-only text-center">IV</th>
+                                </>
+                            )}
+                            {viewMode === 'OI' && (
+                                <>
+                                    <th className="desktop-only text-right">VOL</th>
+                                    <th className="text-right">CHG_OI</th>
+                                    <th className="text-right">OI</th>
+                                </>
+                            )}
                         </tr>
                     </thead>
                     <tbody>
                         {data.map((row) => {
                             const isATM = Math.abs(row.strike - currentPrice) < 25;
-                            const isCallHovered = hoverState.strike === row.strike && hoverState.side === 'call';
-                            const isPutHovered = hoverState.strike === row.strike && hoverState.side === 'put';
+                            const ceITM = row.strike < currentPrice;
+                            const peITM = row.strike > currentPrice;
 
                             return (
-                                <tr key={row.strike} className={`${isATM ? 'atm-row' : ''}`}>
-                                    {/* Desktop Call Side */}
+                                <tr key={row.strike} className={isATM ? 'atm-row' : ''}>
+                                    {/* Desktop CALL Side */}
                                     <React.Fragment>
                                         {viewMode === 'LTP' && (
                                             <>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.iv.toFixed(1)}</td>
-                                                <td className={`side-cluster call ltp-cell desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.ltp.toFixed(2)}</td>
-                                                <td className={`side-cluster call val desktop-only ${row.call.chng >= 0 ? 'pos' : 'neg'} ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.chng >= 0 ? '+' : ''}{row.call.chng.toFixed(2)}%</td>
+                                                <td className={`desktop-only text-center mono ${ceITM ? 'itm' : ''}`}>{row.call.iv.toFixed(1)}</td>
+                                                <td className={`desktop-only text-right mono bold ${ceITM ? 'itm' : ''}`}>{row.call.ltp.toFixed(2)}</td>
+                                                <td className={`desktop-only text-right mono ${ceITM ? 'itm' : ''} ${row.call.chng >= 0 ? 'success' : 'hazardous'}`}>
+                                                    {row.call.chng >= 0 ? '+' : ''}{row.call.chng.toFixed(2)}%
+                                                </td>
                                             </>
                                         )}
                                         {viewMode === 'Greeks' && (
                                             <>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.iv.toFixed(1)}</td>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.delta.toFixed(2)}</td>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.theta.toFixed(2)}</td>
+                                                <td className={`desktop-only text-center mono ${ceITM ? 'itm' : ''}`}>{row.call.iv.toFixed(1)}</td>
+                                                <td className={`desktop-only text-right mono ${ceITM ? 'itm' : ''}`}>{row.call.delta.toFixed(2)}</td>
+                                                <td className={`desktop-only text-right mono ${ceITM ? 'itm' : ''}`}>{row.call.theta.toFixed(2)}</td>
                                             </>
                                         )}
                                         {viewMode === 'OI' && (
                                             <>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{(row.call.oi / 1000).toFixed(1)}k</td>
-                                                <td className={`side-cluster call val desktop-only ${row.call.oiChng >= 0 ? 'pos' : 'neg'} ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{(row.call.oiChng / 1000).toFixed(1)}k</td>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{(row.call.volume / 1000).toFixed(0)}k</td>
-                                                <td className={`side-cluster call desktop-only ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`}>{row.call.iv.toFixed(1)}</td>
+                                                <td className={`desktop-only text-right mono ${ceITM ? 'itm' : ''}`}>{(row.call.oi / 1000).toFixed(1)}k</td>
+                                                <td className={`desktop-only text-right mono ${ceITM ? 'itm' : ''} ${row.call.oiChng >= 0 ? 'success' : 'hazardous'}`}>{(row.call.oiChng / 1000).toFixed(1)}k</td>
+                                                <td className={`desktop-only text-right mono ${ceITM ? 'itm' : ''}`}>{(row.call.volume / 1000).toFixed(0)}k</td>
                                             </>
                                         )}
                                     </React.Fragment>
 
-                                    <td className="strike-val">{row.strike}</td>
+                                    {/* STRIKE Center */}
+                                    <td className="strike-cell bold mono">{row.strike}</td>
 
-                                    {/* Mobile/Shared Adaptive Side */}
-                                    {mobileSide === 'CE' ? (
-                                        <React.Fragment>
-                                            {viewMode === 'LTP' && <>
-                                                <td className={`side-cluster call ltp-cell ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`} onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{row.call.ltp.toFixed(2)}</td>
-                                                <td className={`side-cluster call val ${row.call.chng >= 0 ? 'pos' : 'neg'} ${isCallHovered ? 'hovered' : ''} ${row.strike < currentPrice ? 'itm' : ''}`} onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{row.call.chng >= 0 ? '+' : ''}{row.call.chng.toFixed(2)}%</td>
-                                                <td className="side-cluster call desktop-only">{row.call.iv.toFixed(1)}</td>
-                                            </>}
-                                            {viewMode === 'Greeks' && <>
-                                                <td className={`side-cluster call ${isCallHovered ? 'hovered' : ''}`} onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{row.call.delta.toFixed(2)}</td>
-                                                <td className={`side-cluster call ${isCallHovered ? 'hovered' : ''}`} onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{row.call.theta.toFixed(2)}</td>
-                                                <td className="desktop-only">{row.call.iv.toFixed(1)}</td>
-                                            </>}
-                                            {viewMode === 'OI' && <>
-                                                <td className="desktop-only">{row.call.iv.toFixed(1)}</td>
-                                                <td className="side-cluster call" onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{(row.call.volume / 1000).toFixed(0)}k</td>
-                                                <td className="side-cluster call val" onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{(row.call.oiChng / 1000).toFixed(1)}k</td>
-                                                <td className="side-cluster call" onClick={() => handleOptionSelect('CE', row.strike, row.call.ltp)}>{(row.call.oi / 1000).toFixed(1)}k</td>
-                                            </>}
-                                        </React.Fragment>
-                                    ) : (
-                                        <React.Fragment>
-                                            {viewMode === 'LTP' && <>
-                                                <td className={`side-cluster put ltp-cell ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`} onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{row.put.ltp.toFixed(2)}</td>
-                                                <td className={`side-cluster put val ${row.put.chng >= 0 ? 'pos' : 'neg'} ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`} onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{row.put.chng >= 0 ? '+' : ''}{row.put.chng.toFixed(2)}%</td>
-                                                <td className="side-cluster put desktop-only">{row.put.iv.toFixed(1)}</td>
-                                            </>}
-                                            {viewMode === 'Greeks' && <>
-                                                <td className={`side-cluster put ${isPutHovered ? 'hovered' : ''}`} onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{row.put.delta.toFixed(2)}</td>
-                                                <td className={`side-cluster put ${isPutHovered ? 'hovered' : ''}`} onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{row.put.theta.toFixed(2)}</td>
-                                                <td className="desktop-only">{row.put.iv.toFixed(1)}</td>
-                                            </>}
-                                            {viewMode === 'OI' && <>
-                                                <td className="desktop-only">{row.put.iv.toFixed(1)}</td>
-                                                <td className="side-cluster put" onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{(row.put.volume / 1000).toFixed(0)}k</td>
-                                                <td className="side-cluster put val" onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{(row.put.oiChng / 1000).toFixed(1)}k</td>
-                                                <td className="side-cluster put" onClick={() => handleOptionSelect('PE', row.strike, row.put.ltp)}>{(row.put.oi / 1000).toFixed(1)}k</td>
-                                            </>}
-                                        </React.Fragment>
-                                    )}
+                                    {/* Responsive PUT Side / Active Side */}
+                                    {(() => {
+                                        const side = isMobile ? mobileSide : 'PE';
+                                        const sideData = side === 'CE' ? row.call : row.put;
+                                        const isITM = side === 'CE' ? ceITM : peITM;
 
-                                    {/* Desktop Put Side */}
-                                    <React.Fragment>
-                                        {viewMode === 'LTP' && (
+                                        if (viewMode === 'LTP') return (
                                             <>
-                                                <td className={`side-cluster put val desktop-only ${row.put.chng >= 0 ? 'pos' : 'neg'} ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.chng >= 0 ? '+' : ''}{row.put.chng.toFixed(2)}%</td>
-                                                <td className={`side-cluster put ltp-cell desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.ltp.toFixed(2)}</td>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.iv.toFixed(1)}</td>
+                                                <td className={`text-right mono bold clickable ${isITM ? 'itm' : ''}`} onClick={() => handleOptionSelect(side, row.strike, sideData.ltp)}>{sideData.ltp.toFixed(2)}</td>
+                                                <td className={`text-right mono clickable ${isITM ? 'itm' : ''} ${sideData.chng >= 0 ? 'success' : 'hazardous'}`} onClick={() => handleOptionSelect(side, row.strike, sideData.ltp)}>
+                                                    {sideData.chng >= 0 ? '+' : ''}{sideData.chng.toFixed(2)}%
+                                                </td>
+                                                {!isMobile && <td className={`text-center mono ${isITM ? 'itm' : ''}`}>{sideData.iv.toFixed(1)}</td>}
                                             </>
-                                        )}
-                                        {viewMode === 'Greeks' && (
+                                        );
+                                        if (viewMode === 'Greeks') return (
                                             <>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.theta.toFixed(2)}</td>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.delta.toFixed(2)}</td>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.iv.toFixed(1)}</td>
+                                                <td className={`text-right mono clickable ${isITM ? 'itm' : ''}`} onClick={() => handleOptionSelect(side, row.strike, sideData.ltp)}>{sideData.delta.toFixed(2)}</td>
+                                                <td className={`text-right mono clickable ${isITM ? 'itm' : ''}`} onClick={() => handleOptionSelect(side, row.strike, sideData.ltp)}>{sideData.theta.toFixed(2)}</td>
+                                                {!isMobile && <td className={`text-center mono ${isITM ? 'itm' : ''}`}>{sideData.iv.toFixed(1)}</td>}
                                             </>
-                                        )}
-                                        {viewMode === 'OI' && (
+                                        );
+                                        if (viewMode === 'OI') return (
                                             <>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{row.put.iv.toFixed(1)}</td>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{(row.put.volume / 1000).toFixed(0)}k</td>
-                                                <td className={`side-cluster put val desktop-only ${row.put.oiChng >= 0 ? 'pos' : 'neg'} ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{(row.put.oiChng / 1000).toFixed(1)}k</td>
-                                                <td className={`side-cluster put desktop-only ${isPutHovered ? 'hovered' : ''} ${row.strike > currentPrice ? 'itm' : ''}`}>{(row.put.oi / 1000).toFixed(1)}k</td>
+                                                {!isMobile && <td className={`text-right mono ${isITM ? 'itm' : ''}`}>{(sideData.volume / 1000).toFixed(0)}k</td>}
+                                                <td className={`text-right mono clickable ${isITM ? 'itm' : ''} ${sideData.oiChng >= 0 ? 'success' : 'hazardous'}`} onClick={() => handleOptionSelect(side, row.strike, sideData.ltp)}>{(sideData.oiChng / 1000).toFixed(1)}k</td>
+                                                <td className={`text-right mono clickable ${isITM ? 'itm' : ''}`} onClick={() => handleOptionSelect(side, row.strike, sideData.ltp)}>{(sideData.oi / 1000).toFixed(1)}k</td>
                                             </>
-                                        )}
-                                    </React.Fragment>
+                                        );
+                                    })()}
                                 </tr>
                             );
                         })}
@@ -290,139 +274,40 @@ export default function OptionChain({ symbol, currentPrice, onSelectOption }: Op
             </div>
 
             <style jsx>{`
-                .option-chain-container {
-                    display: flex;
-                    flex-direction: column;
-                    height: 100%;
-                    background: var(--background, #111);
-                    font-family: var(--font-mono);
-                }
-                .chain-top-bar {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 8px 12px;
-                    background: var(--panel-header-bg, #1a1a1a);
-                    border-bottom: 1px solid var(--border, #333);
-                }
-                .left-controls { display: flex; gap: 16px; }
-                .label { font-size: 9px; color: var(--muted, #888); text-transform: uppercase; }
-                .dropdown {
-                    font-size: 10px;
-                    font-weight: 600;
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    cursor: pointer;
-                }
-                .view-switcher {
-                    display: flex;
-                    background: var(--background, #000);
-                    border: 1px solid var(--border, #333);
-                    border-radius: 4px;
-                    padding: 2px;
-                }
-                .view-switcher button {
-                    background: transparent;
-                    border: none;
-                    color: var(--muted, #888);
-                    font-size: 9px;
-                    font-weight: 700;
-                    padding: 4px 10px;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    gap: 4px;
-                    border-radius: 2px;
-                }
-                .view-switcher button.active {
-                    background: var(--panel-header-bg, #222);
-                    color: var(--accent, #3b82f6);
-                }
-                
-                .market-price { display: flex; align-items: center; gap: 8px; }
-                .val { font-size: 11px; font-weight: 700; color: var(--accent, #10b981); }
-
-                .table-wrapper {
-                    flex: 1;
-                    overflow: auto;
-                }
-                table { width: 100%; border-collapse: collapse; }
-                th {
-                    position: sticky;
-                    top: 0;
-                    background: var(--panel-header-bg, #1a1a1a);
-                    z-index: 10;
-                    font-size: 9px;
-                    color: var(--muted, #888);
-                    padding: 8px 4px;
-                    border-bottom: 1px solid var(--border, #333);
-                }
-                .side-headers th { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; padding: 6px; }
-                .call-side { background: rgba(59, 130, 246, 0.05) !important; color: #3b82f6; }
-                .put-side { background: rgba(245, 158, 11, 0.05) !important; color: #f59e0b; }
-                .strike-header { background: var(--panel-header-bg, #1a1a1a) !important; width: 80px; text-align: center; }
-
-                td {
-                    padding: 6px 8px;
-                    font-size: 10px;
-                    text-align: right;
-                    border-bottom: 1px solid rgba(255,255,255,0.02);
-                }
-                .strike-val {
-                    text-align: center;
-                    background: #000;
-                    font-weight: 700;
-                    color: #fff;
-                    border-left: 1px solid var(--border, #333);
-                    border-right: 1px solid var(--border, #333);
-                    width: 80px;
-                }
-                .side-cluster { cursor: pointer; transition: background 0.15s; }
-                .itm { background: rgba(255, 255, 255, 0.03); }
-                
-                .side-cluster.call.hovered { background: rgba(59, 130, 246, 0.15) !important; color: #3b82f6; }
-                .side-cluster.put.hovered { background: rgba(245, 158, 11, 0.15) !important; color: #f59e0b; }
-
-                .ltp-cell { font-weight: 700; color: #fff; }
-                .pos { color: #10b981; }
-                .neg { color: #ef4444; }
-
-                .atm-row td { border-top: 1px solid #555; border-bottom: 1px solid #555; }
-                .atm-row .strike-val { color: #3b82f6; border: 1px solid #3b82f6; }
-
-                .mobile-side-toggle { display: none; }
-                .mobile-only { display: none; }
-
+                .option-chain { display: flex; flex-direction: column; height: 100%; background: var(--bg-primary); }
+                .chain-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-2) var(--space-4); background: var(--bg-tertiary); border-bottom: 1px solid var(--border); }
+                .expiry-selector { display: flex; align-items: center; gap: var(--space-2); }
+                .label { font-size: 8px; color: var(--fg-muted); }
+                .expiry-val { font-size: 10px; display: flex; align-items: center; gap: 4px; cursor: pointer; }
+                .view-selector { display: flex; background: var(--bg-primary); padding: 2px; border-radius: var(--radius); border: 1px solid var(--border); }
+                .view-selector button { border: none; background: transparent; color: var(--fg-muted); padding: 4px 10px; font-size: 9px; font-weight: 800; cursor: pointer; transition: all 0.2s; }
+                .view-selector button.active { background: var(--bg-tertiary); color: var(--accent); }
+                .spot-price { display: flex; align-items: center; gap: var(--space-2); font-size: 10px; }
+                .mobile-side-tabs { display: none; }
+                .table-container { flex: 1; overflow: auto; }
+                table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+                th { position: sticky; top: 0; background: var(--bg-primary); z-index: 10; padding: var(--space-2); font-size: 8px; color: var(--fg-muted); border-bottom: 1px solid var(--border); text-align: right; }
+                .main-heads th { font-size: 9px; font-weight: 800; text-align: center; background: var(--bg-tertiary); }
+                .ce-side { border-right: 1px solid var(--border); color: var(--info); }
+                .pe-side { border-left: 1px solid var(--border); color: #f59e0b; }
+                .strike-head { text-align: center; width: 70px; background: var(--bg-secondary) !important; color: var(--fg-primary); }
+                td { padding: var(--space-2) var(--space-3); font-size: 10px; border-bottom: 1px solid rgba(255,255,255,0.02); }
+                .strike-cell { text-align: center; background: var(--bg-secondary); border-left: 1px solid var(--border); border-right: 1px solid var(--border); width: 70px; font-weight: 800; }
+                .itm { background: var(--accent-soft); }
+                .atm-row td { border-top: 1px solid var(--border-strong); border-bottom: 1px solid var(--border-strong); }
+                .atm-row .strike-cell { color: var(--accent); }
+                .clickable { cursor: pointer; }
+                .text-center { text-align: center; }
+                .text-right { text-align: right; }
+                @media (hover: hover) { .clickable:hover { background: var(--bg-tertiary); } }
                 @media (max-width: 768px) {
                     .desktop-only { display: none !important; }
-                    .mobile-only { display: table-cell !important; }
-                    .chain-top-bar { flex-direction: column; gap: 12px; align-items: stretch; padding: 12px; }
-                    .left-controls, .market-price { display: none; }
-                    .view-switcher { justify-content: center; }
-                    
-                    .mobile-side-toggle {
-                        display: flex;
-                        background: rgba(0,0,0,0.3);
-                        border: 1px solid var(--border, #333);
-                        border-radius: 4px;
-                        padding: 2px;
-                    }
-                    .mobile-side-toggle button {
-                        flex: 1;
-                        background: transparent;
-                        border: none;
-                        color: var(--muted, #888);
-                        font-size: 10px;
-                        font-weight: 800;
-                        padding: 8px;
-                        border-radius: 2px;
-                    }
-                    .mobile-side-toggle button.active.ce { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-                    .mobile-side-toggle button.active.pe { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-                    
-                    .strike-val { width: 60px; font-size: 11px; }
-                    td { padding: 8px 4px; }
+                    .chain-header { flex-direction: column; gap: var(--space-2); padding: var(--space-2) var(--space-3); }
+                    .mobile-side-tabs { display: flex; gap: 1px; background: var(--border); padding: 1px; border-bottom: 1px solid var(--border); }
+                    .mobile-side-tabs button { flex: 1; border: none; background: var(--bg-primary); color: var(--fg-muted); padding: 8px; font-size: 9px; font-weight: 800; cursor: pointer; }
+                    .mobile-side-tabs button.active.ce { color: var(--info); background: var(--bg-tertiary); }
+                    .mobile-side-tabs button.active.pe { color: #f59e0b; background: var(--bg-tertiary); }
+                    .strike-cell, .strike-head { width: 60px; }
                 }
             `}</style>
         </div>

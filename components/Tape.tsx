@@ -92,7 +92,9 @@ export default function Tape({ symbol, currentPrice }: { symbol: string, current
                     transition: var(--transition);
                 }
                 .tape-row.clickable { cursor: pointer; }
-                .tape-row:hover { background: var(--bg-tertiary); }
+                @media (hover: hover) {
+                    .tape-row:hover { background: var(--bg-tertiary); }
+                }
                 
                 .time { font-size: 9px; color: var(--fg-muted); }
                 .price { font-size: 10px; }
